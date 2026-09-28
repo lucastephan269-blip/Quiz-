@@ -1,0 +1,2394 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quizes – Quiz-Duell für deine Runde</title>
+<style>
+  :root {
+    --bg: #08080f;
+    --card: rgba(255, 255, 255, 0.045);
+    --border: rgba(255, 255, 255, 0.10);
+    --text: #f4f4f8;
+    --muted: #9a9ab0;
+    --accent: #a855f7;
+    --accent-2: #ec4899;
+    --ok: #34d399;
+    --bad: #f87171;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    justify-content: center;
+    padding: 28px 18px 44px;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ---------- Lebendiger Hintergrund ---------- */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -30%;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(680px 520px at 18% 12%, rgba(168, 85, 247, 0.40), transparent 62%),
+      radial-gradient(620px 520px at 84% 18%, rgba(236, 72, 153, 0.32), transparent 62%),
+      radial-gradient(760px 640px at 50% 92%, rgba(34, 211, 238, 0.22), transparent 66%),
+      radial-gradient(500px 500px at 8% 88%, rgba(99, 102, 241, 0.28), transparent 64%);
+    filter: blur(10px);
+    animation: aurora 22s ease-in-out infinite alternate;
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 3px),
+      radial-gradient(120% 90% at 50% 0%, transparent 42%, rgba(5, 4, 12, 0.72) 100%);
+    mix-blend-mode: screen;
+    opacity: 0.7;
+  }
+
+  #fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+
+  @keyframes aurora {
+    0%   { transform: translate3d(-2%, -1%, 0) scale(1.02); }
+    50%  { transform: translate3d(2%, 2%, 0) scale(1.08); }
+    100% { transform: translate3d(-1%, 1%, 0) scale(1.03); }
+  }
+  @keyframes spinSlow { to { transform: rotate(360deg); } }
+  @keyframes shimmer {
+    0%, 100% { background-position: 0% 50%; }
+    50%      { background-position: 100% 50%; }
+  }
+  @keyframes tileIn {
+    from { opacity: 0; transform: translateY(-14px) rotate(-6deg) scale(0.85); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.94); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .wrap {
+    width: 100%; max-width: 880px; display: flex; flex-direction: column; gap: 20px;
+    position: relative; z-index: 1;
+    animation: popIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* ---------- Kopfzeile ---------- */
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-logo {
+    width: 44px; height: 44px; border-radius: 14px; flex: 0 0 auto;
+    background: conic-gradient(from 180deg, var(--accent), var(--accent-2), #22d3ee, var(--accent));
+    display: grid; place-items: center;
+    font-weight: 900; font-size: 20px; color: #fff;
+    box-shadow: 0 10px 30px rgba(168, 85, 247, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    animation: spinSlow 14s linear infinite;
+  }
+  .brand-logo > span { animation: spinSlow 14s linear infinite reverse; }
+  .brand-text b { display: block; font-size: 15px; letter-spacing: 0.02em; }
+  .brand-text span { font-size: 12px; color: var(--muted); }
+
+  /* ---------- Karten ---------- */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 28px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45);
+  }
+
+  .screen { display: none; }
+  .screen.active { display: flex; flex-direction: column; gap: 20px; }
+
+  /* ---------- Start ---------- */
+  h1 {
+    margin: 0 0 6px;
+    font-size: clamp(28px, 6vw, 44px);
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    background: linear-gradient(110deg, #ffffff 6%, #e9d5ff 32%, #f9a8d4 58%, #67e8f9 92%);
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shimmer 7s ease-in-out infinite;
+  }
+  .lead { margin: 0 0 22px; color: var(--muted); font-size: 15px; line-height: 1.6; }
+
+  .section-label {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--muted); font-weight: 700; margin: 0 0 10px;
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 22px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 14px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--muted); font-size: 13.5px; font-weight: 600;
+    transition: transform 0.12s ease, border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+    user-select: none;
+  }
+  .chip:hover { transform: translateY(-1px); border-color: rgba(255, 255, 255, 0.25); }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; opacity: 0.45; }
+  .chip .count { font-weight: 500; opacity: 0.6; font-size: 12px; }
+  .chip.on { color: #fff; background: rgba(255, 255, 255, 0.09); border-color: rgba(255, 255, 255, 0.28); }
+  .chip.on .dot { opacity: 1; box-shadow: 0 0 12px currentColor; }
+
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; }
+  .preset {
+    padding: 8px 13px; border-radius: 11px; font-size: 12.5px; font-weight: 700;
+    background: rgba(255, 255, 255, 0.05); color: var(--muted);
+    border: 1px solid var(--border); transition: all 0.15s ease;
+  }
+  .preset:hover { color: #fff; border-color: rgba(255, 255, 255, 0.3); transform: translateY(-1px); }
+
+  /* ---------- Eingabefelder ---------- */
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 12.5px; color: var(--muted); font-weight: 700; margin-bottom: 7px; }
+  .inp {
+    width: 100%; padding: 14px 16px; font-size: 16px; font-family: inherit;
+    color: var(--text); background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 13px; outline: none;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .inp::placeholder { color: #6f6f88; }
+  .inp:focus {
+    border-color: var(--accent); background: rgba(168, 85, 247, 0.12);
+    box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.18);
+  }
+  .inp.code {
+    text-transform: uppercase; letter-spacing: 0.18em; font-weight: 900;
+    font-size: 21px; text-align: center; max-width: 240px;
+  }
+
+  /* ---------- Moduskarten ---------- */
+  .modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 11px; }
+  .mode {
+    position: relative; overflow: hidden;
+    text-align: left; padding: 15px 16px; border-radius: 16px; cursor: pointer;
+    background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border);
+    color: var(--text); transition: all 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .mode::before {
+    content: ""; position: absolute; inset: 0; opacity: 0; pointer-events: none;
+    background: radial-gradient(240px 120px at 20% 0%, rgba(168, 85, 247, 0.30), transparent 70%);
+    transition: opacity 0.2s ease;
+  }
+  .mode:hover:not(:disabled) { background: rgba(255, 255, 255, 0.09); border-color: rgba(255, 255, 255, 0.28); transform: translateY(-3px) scale(1.012); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4); }
+  .mode:hover:not(:disabled)::before { opacity: 1; }
+  .mode:active:not(:disabled) { transform: translateY(-1px) scale(0.996); }
+  .mode:disabled { opacity: 0.55; cursor: wait; }
+  .mode .top { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+  .mode .icon { font-size: 20px; }
+  .mode .name { font-weight: 800; font-size: 15px; }
+  .mode .desc { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+  .mode .meta { font-size: 11.5px; color: #6f6f88; margin-top: 7px; font-weight: 700; }
+
+  .status { font-size: 13px; font-weight: 700; }
+  .status.ok { color: var(--ok); }
+  .status.off { color: #fbbf24; }
+
+  .row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .row.toggles { gap: 22px; }
+  .spacer { flex: 1 1 auto; }
+
+  .switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; color: var(--muted); user-select: none; }
+  .switch input { display: none; }
+  .track {
+    width: 42px; height: 24px; border-radius: 999px; position: relative;
+    background: rgba(255, 255, 255, 0.12); transition: background 0.18s ease; flex: 0 0 auto;
+  }
+  .track::after {
+    content: ""; position: absolute; top: 3px; left: 3px;
+    width: 18px; height: 18px; border-radius: 50%; background: #fff;
+    transition: transform 0.18s ease;
+  }
+  .switch input:checked + .track { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+  .switch input:checked + .track::after { transform: translateX(18px); }
+
+  button { font-family: inherit; cursor: pointer; border: none; }
+
+  .btn {
+    position: relative; overflow: hidden;
+    padding: 13px 22px; border-radius: 15px; font-size: 15px; font-weight: 800;
+    background: rgba(255, 255, 255, 0.07); color: var(--text);
+    border: 1px solid var(--border);
+    transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1), background 0.15s ease, opacity 0.15s ease;
+  }
+  .btn::after {
+    content: ""; position: absolute; top: 0; left: -120%; width: 60%; height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.32), transparent);
+    transform: skewX(-18deg); transition: left 0.55s ease; pointer-events: none;
+  }
+  .btn:hover:not(:disabled)::after { left: 140%; }
+  .btn:hover { background: rgba(255, 255, 255, 0.13); transform: translateY(-2px); }
+  .btn:active { transform: translateY(0) scale(0.985); }
+  .btn.primary {
+    background: linear-gradient(120deg, var(--accent), var(--accent-2) 55%, #22d3ee);
+    background-size: 200% 100%;
+    color: #fff; border-color: transparent;
+    box-shadow: 0 14px 34px rgba(168, 85, 247, 0.42);
+    animation: shimmer 9s ease-in-out infinite;
+  }
+  .btn:disabled { opacity: 0.42; cursor: not-allowed; transform: none; }
+  .btn:disabled::after { display: none; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.ghost { background: transparent; color: var(--muted); border-color: transparent; }
+  .btn.ghost:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+
+  /* ---------- Quiz ---------- */
+  .qhead { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+    background: rgba(255, 255, 255, 0.07); border: 1px solid var(--border);
+  }
+  .badge .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .counter { margin-left: auto; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .score { color: var(--ok); font-weight: 700; }
+
+  .progress { height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; margin-bottom: 30px; }
+  .progress > i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.35s ease; }
+
+  .qtext {
+    margin: 0; font-size: clamp(21px, 3.4vw, 31px); line-height: 1.35; font-weight: 700;
+    letter-spacing: -0.01em; min-height: 2.7em;
+  }
+  .anim-in { animation: slideIn 0.3s ease both; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Eingabe ---------- */
+  .answer-row { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+  #answerInput {
+    flex: 1 1 260px; min-width: 0;
+    padding: 15px 18px; font-size: 17px; font-family: inherit;
+    color: var(--text); background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 14px;
+    outline: none; transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  #answerInput::placeholder { color: #6f6f88; }
+  #answerInput:focus { border-color: var(--accent); background: rgba(168, 85, 247, 0.10); }
+  #answerInput:disabled { opacity: 0.55; }
+  #answerInput.good { border-color: var(--ok); background: rgba(52, 211, 153, 0.12); }
+  #answerInput.bad  { border-color: var(--bad); background: rgba(248, 113, 113, 0.12); }
+
+  /* ---------- Auflösung ---------- */
+  .answer {
+    margin-top: 18px; border-radius: 16px; padding: 0 20px;
+    max-height: 0; opacity: 0; overflow: hidden;
+    border: 1px solid transparent;
+    transition: max-height 0.32s ease, opacity 0.28s ease, padding 0.32s ease, border-color 0.3s ease;
+  }
+  .answer.show { max-height: 560px; opacity: 1; padding: 18px 20px; }
+  .answer.ok  { background: linear-gradient(135deg, rgba(52, 211, 153, 0.16), rgba(56, 189, 248, 0.08)); border-color: rgba(52, 211, 153, 0.4); }
+  .answer.bad { background: linear-gradient(135deg, rgba(248, 113, 113, 0.16), rgba(236, 72, 153, 0.08)); border-color: rgba(248, 113, 113, 0.4); }
+  .answer .verdict { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 800; margin-bottom: 9px; }
+  .answer.ok  .verdict { color: var(--ok); }
+  .answer.bad .verdict { color: var(--bad); }
+  .answer .sol { font-size: clamp(17px, 2.4vw, 21px); line-height: 1.45; font-weight: 600; }
+  .answer .sol .lbl { color: var(--muted); font-weight: 600; }
+  .answer .note { margin-top: 8px; font-size: 14px; color: var(--muted); line-height: 1.5; }
+
+  .actions { display: flex; align-items: center; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+  .hint { font-size: 12.5px; color: var(--muted); margin-top: 20px; }
+  kbd {
+    display: inline-block; padding: 2px 7px; border-radius: 6px; font-size: 11.5px;
+    background: rgba(255, 255, 255, 0.1); border: 1px solid var(--border);
+    font-family: inherit; font-weight: 700;
+  }
+
+  /* ---------- Ende ---------- */
+  .end-emoji { font-size: 56px; line-height: 1; margin-bottom: 14px; }
+  .end-stats { display: flex; gap: 12px; flex-wrap: wrap; margin: 4px 0 22px; }
+  .stat {
+    flex: 1 1 130px; padding: 16px 18px; border-radius: 16px;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border);
+  }
+  .stat b { display: block; font-size: 28px; line-height: 1.1; }
+  .stat span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
+
+  footer {
+    text-align: center; font-size: 12px; color: #6b6b83; line-height: 1.7;
+    padding: 4px 10px 0;
+  }
+
+  /* ---------- Beitritt per Raum-Code ---------- */
+  .join-hero {
+    text-align: center; padding: 22px 18px; border-radius: 22px;
+    border: 1px solid rgba(168, 85, 247, 0.34);
+    background:
+      radial-gradient(420px 200px at 50% 0%, rgba(168, 85, 247, 0.26), transparent 70%),
+      rgba(255, 255, 255, 0.035);
+  }
+  .join-hero-kicker {
+    font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.2em;
+    font-weight: 800; color: #d8b4fe; margin-bottom: 14px;
+  }
+  .join-hero .row { align-items: stretch; }
+  .code-tiles { display: flex; justify-content: center; gap: 7px; flex-wrap: wrap; min-height: 60px; align-items: center; }
+  .code-tile {
+    width: clamp(36px, 10vw, 52px); height: clamp(48px, 13vw, 66px);
+    display: grid; place-items: center; border-radius: 15px;
+    font-size: clamp(21px, 6vw, 32px); font-weight: 900;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.04));
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: inset 0 -8px 18px rgba(0, 0, 0, 0.35), 0 10px 26px rgba(0, 0, 0, 0.35);
+    animation: tileIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .code-tile.num { color: #fcd34d; border-color: rgba(251, 191, 36, 0.35); }
+  .code-hint { font-size: 13px; color: #6f6f8d; letter-spacing: 0.02em; }
+
+  /* ---------- So kommt ihr rein ---------- */
+  .steps { display: flex; flex-direction: column; gap: 9px; }
+  .step {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 11px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5;
+    background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); color: var(--muted);
+  }
+  .step b { color: var(--text); }
+  .step .n {
+    flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 12px; font-weight: 900; color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 6px 16px rgba(168, 85, 247, 0.4);
+  }
+
+  /* ---------- Show-Effekte ---------- */
+  #confetti { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+  .confetti-bit {
+    position: absolute; width: 9px; height: 14px; border-radius: 3px;
+    animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    from { opacity: 1; transform: translateY(-12vh) rotate(0deg); }
+    to   { opacity: 0; transform: translateY(112vh) rotate(720deg); }
+  }
+
+  .flash {
+    position: fixed; inset: 0; z-index: 55; pointer-events: none; opacity: 0; background: #fff;
+  }
+  .flash.on { animation: flashout 0.5s ease-out forwards; }
+  @keyframes flashout { from { opacity: 0.45; } to { opacity: 0; } }
+
+  .shake { animation: shakeHard 0.45s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes shakeHard {
+    0%, 100% { transform: translateX(0); }
+    15% { transform: translateX(-10px) rotate(-0.6deg); }
+    30% { transform: translateX(9px) rotate(0.5deg); }
+    45% { transform: translateX(-7px); }
+    60% { transform: translateX(5px); }
+    80% { transform: translateX(-2px); }
+  }
+
+  /* Richtige Antwort schlägt eine Welle */
+  .answer.ok.show { animation: burstPulse 0.75s ease-out; }
+  @keyframes burstPulse {
+    0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.45); }
+    100% { box-shadow: 0 0 0 30px rgba(52, 211, 153, 0); }
+  }
+
+  /* Emojis, die nach oben wegfliegen */
+  .emoji-float {
+    position: fixed; z-index: 58; pointer-events: none; font-size: 34px;
+    animation: emojiUp 1.3s cubic-bezier(.2,.8,.3,1) forwards;
+  }
+  @keyframes emojiUp {
+    0%   { opacity: 0; transform: translateY(0) scale(0.4); }
+    22%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-150px) scale(1.5) rotate(14deg); }
+  }
+
+  /* Licht auf den Karten folgt dem Zeiger */
+  .mode { --mx: 50%; --my: 0%; }
+  .mode::after {
+    content: ""; position: absolute; inset: 0; opacity: 0; pointer-events: none;
+    transition: opacity 0.2s ease;
+    background: radial-gradient(190px 190px at var(--mx) var(--my), rgba(255, 255, 255, 0.15), transparent 62%);
+  }
+  .mode:hover::after { opacity: 1; }
+
+  /* Siegesserie */
+  .streak {
+    display: inline-flex; align-items: center; gap: 5px; margin-left: 8px;
+    padding: 4px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 800;
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.28), rgba(236, 72, 153, 0.2));
+    border: 1px solid rgba(251, 146, 60, 0.5); color: #fed7aa;
+    animation: popIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .sound-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 15px; border-radius: 13px; font-size: 13px; font-weight: 800;
+    background: rgba(255, 255, 255, 0.05); color: var(--muted);
+    border: 1px solid var(--border); transition: all 0.15s ease;
+  }
+  .sound-btn:hover { color: #fff; border-color: rgba(255, 255, 255, 0.3); transform: translateY(-1px); }
+  .sound-btn.on { color: #fff; border-color: rgba(168, 85, 247, 0.55); background: rgba(168, 85, 247, 0.14); }
+  #musicBtn.on { border-color: rgba(34, 211, 238, 0.55); background: rgba(34, 211, 238, 0.14); }
+
+  /* Konfetti aus den unteren Ecken geschossen */
+  .confetti-bit.cannon { animation-name: confettiCannon; }
+  @keyframes confettiCannon {
+    from { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(1); }
+    to   { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(-620deg) scale(0.9); }
+  }
+
+  /* Feuerwerk über allem – additiv, damit Text frei bleibt */
+  #fw {
+    position: fixed; inset: 0; width: 100%; height: 100%; z-index: 54; pointer-events: none;
+    mix-blend-mode: screen; opacity: 0.95;
+  }
+
+  /* Funkenspur am Zeiger */
+  .spark {
+    position: fixed; z-index: 56; pointer-events: none; border-radius: 50%;
+    animation: sparkOut 0.72s ease-out forwards;
+  }
+  @keyframes sparkOut {
+    from { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
+    to   { opacity: 0; transform: translate(-50%, -50%) scale(0.15); }
+  }
+
+  /* Ansichtswechsel wischt kurz durchs Bild */
+  .wipe {
+    position: fixed; inset: -10% -20%; z-index: 70; pointer-events: none; opacity: 0;
+    background: linear-gradient(100deg, transparent 24%, rgba(168, 85, 247, 0.55) 46%,
+                rgba(236, 72, 153, 0.5) 58%, transparent 80%);
+  }
+  .wipe.on { animation: wipeAcross 0.52s cubic-bezier(0.3, 0.8, 0.2, 1) forwards; }
+  @keyframes wipeAcross {
+    from { opacity: 0; transform: translateX(-120%) skewX(-14deg); }
+    30%  { opacity: 0.9; }
+    to   { opacity: 0; transform: translateX(120%) skewX(-14deg); }
+  }
+
+  /* Das Intro vor dem Start: 3 – 2 – 1 – LOS! */
+  .intro {
+    position: fixed; inset: 0; z-index: 90; display: none; place-items: center;
+    overflow: hidden; text-align: center;
+    background: radial-gradient(circle at 50% 50%, rgba(8, 8, 15, 0.74), rgba(5, 4, 12, 0.95));
+    backdrop-filter: blur(5px);
+  }
+  .intro.on { display: grid; }
+  .intro-num {
+    font-size: clamp(92px, 26vw, 210px); font-weight: 900; line-height: 1; letter-spacing: -0.04em;
+    background: linear-gradient(120deg, #fff, #e9d5ff 38%, #f9a8d4 68%, #67e8f9);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 46px rgba(168, 85, 247, 0.65));
+    animation: introPop 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes introPop {
+    0%   { opacity: 0; transform: scale(2.2); filter: blur(16px); }
+    42%  { opacity: 1; transform: scale(0.92); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .intro-ring {
+    position: absolute; left: 50%; top: 50%; width: 42vmin; height: 42vmin;
+    margin: -21vmin 0 0 -21vmin; border-radius: 50%; pointer-events: none;
+    border: 2px solid rgba(168, 85, 247, 0.55);
+    animation: ringOut 0.75s ease-out forwards;
+  }
+  @keyframes ringOut {
+    from { opacity: 0.85; transform: scale(0.35); }
+    to   { opacity: 0; transform: scale(1.85); }
+  }
+
+  /* Wer eine Serie hat, bringt den Hintergrund zum Glühen */
+  body.hot::before { animation-duration: 7s; filter: blur(10px) saturate(1.5) brightness(1.16); }
+  body.hot .progress > i { background: linear-gradient(90deg, #fbbf24, #ec4899); }
+
+  @media (max-width: 560px) {
+    body { padding: 16px 12px 30px; }
+    .sound-btn { padding: 9px 12px; }
+    .sound-btn span:last-child { display: none; }
+    .join-hero { padding: 18px 14px; }
+    .join-hero .row { gap: 10px; }
+    .join-hero .btn { width: 100%; }
+    .card { padding: 20px; border-radius: 18px; }
+    .actions .btn { flex: 1 1 auto; }
+    .answer-row .btn { flex: 1 1 auto; }
+  }
+
+  /* =========================================================
+     UI 2.0 – Show-Layer
+     Lichtrand läuft um die Karten, Spotlight folgt dem Zeiger,
+     Kacheln kippen in den Raum, Knöpfe schlagen Wellen.
+     ========================================================= */
+  @property --ring-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+
+  .card { position: relative; }
+
+  /* ---------- Lichtrand, der um jede Karte läuft ---------- */
+  .card::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    padding: 1px; pointer-events: none; z-index: 0;
+    background: conic-gradient(from var(--ring-angle),
+      rgba(168, 85, 247, 0) 0deg,
+      rgba(168, 85, 247, 0.90) 55deg,
+      rgba(34, 211, 238, 0.80) 125deg,
+      rgba(236, 72, 153, 0) 195deg,
+      rgba(236, 72, 153, 0.80) 285deg,
+      rgba(168, 85, 247, 0) 360deg);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: ringSpin 11s linear infinite;
+  }
+  @keyframes ringSpin { to { --ring-angle: 360deg; } }
+
+  /* ---------- Licht, das dem Zeiger folgt ---------- */
+  .card::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    pointer-events: none; opacity: 0; transition: opacity 0.32s ease; z-index: 0;
+    background: radial-gradient(460px 460px at var(--mx, 50%) var(--my, 0%),
+      rgba(255, 255, 255, 0.10), transparent 60%);
+  }
+  .card.spot::after { opacity: 1; }
+  .card > * { position: relative; z-index: 1; }
+
+  /* ---------- Kacheln kippen in den Raum ---------- */
+  .stat.tilted, .mode.tilted, .code-tile.tilted, .preset.tilted {
+    transform: perspective(900px) rotateX(var(--tx, 0deg)) rotateY(var(--ty, 0deg)) translateY(-3px) scale(1.02);
+    box-shadow: 0 22px 46px rgba(0, 0, 0, 0.5);
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+  }
+
+  /* ---------- Kopfzeile bleibt beim Scrollen stehen ---------- */
+  .brand {
+    position: sticky; top: 4px; z-index: 20;
+    padding: 9px 12px; margin: -9px -12px;
+    border-radius: 18px;
+    backdrop-filter: blur(12px) saturate(140%);
+    background: linear-gradient(180deg, rgba(8, 8, 15, 0.82), rgba(8, 8, 15, 0.42));
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  /* ---------- Knöpfe und Kacheln: Welle beim Klick ---------- */
+  .ui-ripple {
+    position: absolute; border-radius: 50%; pointer-events: none; z-index: 2;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 70%);
+    transform: translate(-50%, -50%) scale(0);
+    animation: rippleOut 0.68s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  @keyframes rippleOut {
+    from { opacity: 0.9; transform: translate(-50%, -50%) scale(0); }
+    to   { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+  }
+  .btn.primary:hover:not(:disabled) {
+    box-shadow: 0 20px 50px rgba(168, 85, 247, 0.55), 0 0 40px rgba(236, 72, 153, 0.4);
+    transform: translateY(-3px);
+  }
+  .btn:focus-visible, .chip:focus-visible, .preset:focus-visible,
+  .switch:focus-visible, .inp:focus-visible, #answerInput:focus-visible {
+    outline: 2px solid rgba(168, 85, 247, 0.85); outline-offset: 2px;
+  }
+
+  /* ---------- Fortschritt: Licht wandert durch ---------- */
+  .progress > i { position: relative; overflow: hidden; }
+  .progress > i::after {
+    content: ""; position: absolute; inset: 0; opacity: 0.5;
+    background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.34) 0 9px, transparent 9px 20px);
+    animation: stripeRun 0.85s linear infinite;
+  }
+  @keyframes stripeRun { to { transform: translateX(-20px); } }
+
+  /* ---------- Endkacheln glühen ---------- */
+  .stat { transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease; }
+  .stat:hover { border-color: rgba(168, 85, 247, 0.45); }
+  .stat b { background: linear-gradient(120deg, #ffffff, #c4b5fd 55%, #67e8f9);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #counter.bump, .score.bump { display: inline-block; animation: bumpUp 0.62s cubic-bezier(0.22, 1, 0.36, 1); }
+  @keyframes bumpUp {
+    0%   { transform: scale(1); }
+    32%  { transform: scale(1.35); color: #fff; text-shadow: 0 0 18px rgba(52, 211, 153, 0.9); }
+    100% { transform: scale(1); }
+  }
+
+  /* ---------- Schritte und Chips reagieren ---------- */
+  .steps .step, .chip, .preset { transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.18s ease, color 0.18s ease, background 0.18s ease; }
+  .steps .step:hover { transform: translateX(5px); border-color: rgba(168, 85, 247, 0.45); color: var(--text); }
+  .steps .step:hover .n { box-shadow: 0 8px 22px rgba(168, 85, 247, 0.7); }
+  .chip.spot { border-color: rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.08); }
+
+  /* ---------- Die Auflösung ist unsichtbar, solange sie zu ist ---------- */
+  .answer { visibility: hidden; }
+  .answer.show { visibility: visible; }
+
+  /* ---------- Auf Geräten ohne Zeiger und bei Ruhewunsch: still ---------- */
+  @media (hover: none), (prefers-reduced-motion: reduce) {
+    .card::before { animation: none; }
+    .stat.tilted, .mode.tilted, .code-tile.tilted, .preset.tilted { transform: none; }
+  }
+</style>
+</head>
+<body>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div id="confetti" aria-hidden="true"></div>
+<div class="flash" id="flash" aria-hidden="true"></div>
+<canvas id="fw" aria-hidden="true"></canvas>
+<div class="wipe" id="wipe" aria-hidden="true"></div>
+<div class="intro" id="intro" aria-hidden="true"></div>
+<div class="wrap">
+
+  <div class="brand">
+    <div class="brand-logo"><span>Q</span></div>
+    <div class="brand-text">
+      <b>QUIZES</b>
+      <span>Frage lesen &rarr; Antwort eintippen &rarr; sofort ausgewertet</span>
+    </div>
+    <span class="spacer"></span>
+    <button type="button" class="sound-btn" id="musicBtn" title="Musik an- oder ausschalten">
+      <span id="musicIcon">&#127925;</span><span id="musicLabel">Musik aus</span>
+    </button>
+    <button type="button" class="sound-btn on" id="soundBtn" title="Sound an- oder ausschalten">
+      <span id="soundIcon">&#128266;</span><span id="soundLabel">Sound an</span>
+    </button>
+  </div>
+
+  <!-- ============ START ============ -->
+  <section id="screen-start" class="screen active">
+
+    <!-- ---------- Einzelspieler, offline ---------- -->
+    <div id="panel-solo" class="panel card">
+      <h1>Ran an die Buzzers!</h1>
+      <p class="lead">
+        Quiz im Stil von Schmobins Quiz-Duell-Shows: Allgemeinwissen, Promis, Musik und mehr.
+        Du tippst die Antwort selbst ein &ndash; die Datei pr&uuml;ft sie sofort. Kleine Tippfehler
+        und Gro&szlig;-/Kleinschreibung werden verziehen.
+        L&auml;uft auch ohne Internet und ohne Server.
+      </p>
+
+      <p class="section-label">Schnellauswahl</p>
+      <div class="presets" id="presets"></div>
+
+      <p class="section-label">Kategorien w&auml;hlen</p>
+      <div class="chips" id="chips"></div>
+
+      <div class="row toggles">
+        <label class="switch">
+          <input type="checkbox" id="shuffle" checked />
+          <span class="track"></span>
+          <span>Fragen mischen</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" id="scoring" checked />
+          <span class="track"></span>
+          <span>Punkte z&auml;hlen</span>
+        </label>
+      </div>
+
+      <div class="row" style="margin-top:16px">
+        <span class="spacer"></span>
+        <button class="btn primary" id="startBtn">Los geht&#39;s</button>
+      </div>
+      <p class="hint" id="startHint"></p>
+    </div>
+
+    <!-- ---------- Mehrgeräte-Modi: direkt zwischen den Geräten ---------- -->
+    <div id="panel-multi" class="panel card">
+      <h1>Mit Freunden spielen</h1>
+      <p class="lead">
+        Alle sechs Formate aus Schmobins Quiz-Shows &ndash; jeder am eigenen Handy.
+        Ein Ger&auml;t macht den Raum auf, alle anderen &ouml;ffnen <b>dieselbe Adresse</b> und
+        tippen nur den sechsstelligen Code ein. Die Verbindung l&auml;uft danach direkt zwischen
+        euren Ger&auml;ten, bis zu 10 Freunde.
+      </p>
+
+      <p class="section-label">Adresse, die alle &ouml;ffnen</p>
+      <div class="row" style="margin:0 0 8px">
+        <input class="inp" id="shareUrl" type="text" readonly />
+        <button class="btn" type="button" id="shareCopyBtn">Adresse kopieren</button>
+      </div>
+      <p class="hint" id="shareHint" style="margin:0 0 22px"></p>
+
+      <div class="field">
+        <label for="playerName">Dein Name</label>
+        <input class="inp" id="playerName" type="text" maxlength="18" placeholder="Zum Beispiel Alex" autocomplete="off" />
+      </div>
+
+      <div class="join-hero">
+        <div class="join-hero-kicker">&#10035; Code eingeben &ndash; rein bist du &#10035;</div>
+        <div class="code-tiles" id="joinPreview"></div>
+        <div class="row" style="justify-content:center;margin-top:12px">
+          <input class="inp code" id="joinCode" type="text" maxlength="10" placeholder="A3F9KQ"
+                 autocomplete="off" autocapitalize="characters" spellcheck="false" />
+          <button class="btn primary" id="joinBtn">Beitreten</button>
+        </div>
+        <p class="hint" id="multiHint" style="margin-top:12px"></p>
+      </div>
+
+      <p class="section-label" style="margin-top:26px">Neuen Raum aufmachen</p>
+      <p class="hint" style="margin:0 0 12px">
+        Modus aussuchen &ndash; der Raum geht auf, der Code entsteht automatisch. Einfach laut in
+        die Runde rufen.
+      </p>
+      <div class="modes" id="modeList"></div>
+
+      <div class="steps" style="margin-top:24px">
+        <div class="step"><span class="n">1</span><span><b>Ein Ger&auml;t &ouml;ffnet den Raum</b> (am besten ein Laptop) und ruft den Code in die Runde.</span></div>
+        <div class="step"><span class="n">2</span><span><b>Alle anderen &ouml;ffnen dieselbe Adresse</b> im Browser und tippen nur den Code plus ihren Namen ein.</span></div>
+        <div class="step"><span class="n">3</span><span><b>Der Host startet.</b> Sein Fenster bleibt offen &ndash; er rechnet das Spiel, ein Server ist nicht im Spiel.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section id="screen-quiz" class="screen card">
+    <div class="qhead">
+      <span class="badge" id="catBadge"><span class="dot"></span><span id="catName"></span></span>
+      <span class="counter" id="counter"></span>
+    </div>
+    <div class="progress"><i id="bar"></i></div>
+
+    <h2 class="qtext" id="qtext"></h2>
+
+    <div class="answer-row">
+      <input id="answerInput" type="text" autocomplete="off" autocorrect="off"
+             autocapitalize="off" spellcheck="false" placeholder="Antwort hier eintippen&hellip;" />
+      <button class="btn primary" id="checkBtn">Pr&uuml;fen</button>
+    </div>
+
+    <div class="answer" id="answer">
+      <span class="verdict" id="verdict"></span>
+      <span class="sol"><span class="lbl">L&ouml;sung: </span><span id="solution"></span></span>
+      <div class="note" id="note"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="nextBtn" style="display:none">N&auml;chste Frage</button>
+      <button class="btn" id="dontKnowBtn">Wei&szlig; ich nicht</button>
+      <button class="btn ghost" id="skipBtn">&Uuml;berspringen</button>
+      <span class="spacer"></span>
+      <button class="btn ghost" id="quitBtn">Men&uuml;</button>
+    </div>
+
+    <p class="hint">
+      <kbd>Enter</kbd> = Antwort pr&uuml;fen bzw. n&auml;chste Frage &nbsp;&middot;&nbsp;
+      <kbd>Esc</kbd> = zur&uuml;ck zum Men&uuml; &nbsp;&middot;&nbsp;
+      <kbd>M</kbd> = Sound &nbsp;&middot;&nbsp; <kbd>N</kbd> = Musik
+    </p>
+  </section>
+
+  <!-- ============ ENDE ============ -->
+  <section id="screen-end" class="screen card">
+    <div class="end-emoji">&#127881;</div>
+    <h1 id="endTitle">Alle Fragen durch!</h1>
+    <p class="lead" id="endText">Ihr habt die komplette Runde gespielt. Noch eine Runde?</p>
+    <div class="end-stats" id="endStats" style="display:none">
+      <div class="stat"><b id="stRight">0</b><span>Richtig</span></div>
+      <div class="stat"><b id="stWrong">0</b><span>Falsch</span></div>
+      <div class="stat"><b id="stRate">0&nbsp;%</b><span>Trefferquote</span></div>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="againBtn">Nochmal spielen</button>
+      <button class="btn" id="menuBtn">Kategorien &auml;ndern</button>
+    </div>
+  </section>
+
+  <footer>
+    Inoffizielles Fan-Projekt im Stil von <b>Schmobin</b> (Twitch: schmobin, YouTube: @Schmobin).
+  </footer>
+
+</div>
+
+<script>
+/* =========================================================
+   Kategorien
+   ========================================================= */
+const CATEGORIES = {
+  general:    { name: "Allgemeinwissen",  color: "#f59e0b" },
+  promis:     { name: "Promis & Stars",   color: "#fb7185" },
+  musik:      { name: "Musik",            color: "#a855f7" },
+  film:       { name: "Film & Serien",    color: "#f472b6" },
+  sport:      { name: "Sport",            color: "#34d399" },
+  geo:        { name: "Geografie",        color: "#60a5fa" },
+  geschichte: { name: "Geschichte",       color: "#f87171" },
+  science:    { name: "Wissen & Natur",   color: "#a3e635" },
+  essen:      { name: "Essen & Trinken",  color: "#22d3ee" }
+};
+
+const PRESETS = [
+  { name: "Klassisches Quiz-Duell", keys: ["general", "promis", "musik", "film"] },
+  { name: "Nur Promis & Musik",     keys: ["promis", "musik"] },
+  { name: "Bildung & Wissen",       keys: ["general", "geschichte", "science", "geo"] },
+  { name: "Locker & lustig",        keys: ["essen", "film", "sport"] },
+  { name: "Alles",                  keys: Object.keys(CATEGORIES) }
+];
+
+/* =========================================================
+   Fragenpool
+   c        = Kategorie
+   q        = Frage
+   answers  = akzeptierte Antworten; der ERSTE Eintrag wird als Lösung angezeigt
+   all      = optional: es müssen ALLE Begriffe vorkommen
+   note     = optionale Zusatzinfo nach der Auflösung
+   ========================================================= */
+const QUESTIONS = [
+  /* ===================== Allgemeinwissen ===================== */
+  { c:"general", q:"Wie viele Bundesländer hat Deutschland?", answers:["16", "sechzehn"] },
+  { c:"general", q:"Wie heißt die Hauptstadt von Australien?", answers:["Canberra"], note:"Nicht Sydney!" },
+  { c:"general", q:"Wie viele Minuten hat ein ganzer Tag?", answers:["1.440", "1440", "eintausendvierhundertvierzig"] },
+  { c:"general", q:"Welches chemische Symbol hat Gold?", answers:["Au", "aurum"], note:"Von lateinisch aurum." },
+  { c:"general", q:"Wie viele Kontinente gibt es auf der Erde?", answers:["Sieben", "7"] },
+  { c:"general", q:"Wie viele Tage hat ein Schaltjahr?", answers:["366", "dreihundertsechsundsechzig"] },
+  { c:"general", q:"Wie viele Sekunden hat eine Stunde?", answers:["3.600", "3600"] },
+  { c:"general", q:"Wie viele Stunden hat eine Woche?", answers:["168"] },
+  { c:"general", q:"Welche Einheit misst die elektrische Spannung?", answers:["Volt"] },
+  { c:"general", q:"Welche Farbe entsteht, wenn man Blau und Gelb mischt?", answers:["Grün", "gruen"] },
+  { c:"general", q:"Wie viele Beine hat eine Spinne?", answers:["Acht", "8"] },
+  { c:"general", q:"Wie viele Beine hat ein Insekt?", answers:["Sechs", "6"] },
+  { c:"general", q:"Wie viele Karten hat ein Skatblatt?", answers:["32", "zweiunddreißig"] },
+  { c:"general", q:"Wie viele Monate im Jahr haben 31 Tage?", answers:["Sieben", "7"] },
+  { c:"general", q:"Wie viele Gramm hat ein Kilogramm?", answers:["1.000", "1000", "tausend"] },
+  { c:"general", q:"Wie viele Ecken hat ein Würfel?", answers:["Acht", "8"] },
+  { c:"general", q:"Wie viele Saiten hat eine klassische Gitarre?", answers:["Sechs", "6"] },
+  { c:"general", q:"Wie viele Zähne hat ein erwachsener Mensch normalerweise?", answers:["32", "zweiunddreißig"] },
+  { c:"general", q:"Wie viele Knochen hat ein erwachsener Mensch?", answers:["206"] },
+  { c:"general", q:"Welches ist das größte Organ des menschlichen Körpers?", answers:["Die Haut", "Haut"] },
+  { c:"general", q:"Wie viele Herzkammern hat das menschliche Herz?", answers:["Vier", "4"] },
+  { c:"general", q:"Wie viele Liter Blut hat ein Erwachsener ungefähr?", answers:["Fünf bis sechs", "5", "6", "fünf", "sechs"] },
+  { c:"general", q:"Wie viele Buchstaben hat das deutsche Alphabet ohne Umlaute und ß?", answers:["26", "sechsundzwanzig"] },
+  { c:"general", q:"Wie viele Grad hat ein rechter Winkel?", answers:["90", "neunzig"] },
+  { c:"general", q:"Welche Farbe hat die Mitte der deutschen Flagge?", answers:["Rot"], note:"Die Flagge ist Schwarz, Rot, Gold." },
+  { c:"general", q:"Wie heißt der längste Fluss Deutschlands?", answers:["Der Rhein", "Rhein"] },
+  { c:"general", q:"Wie heißt der höchste Berg Deutschlands?", answers:["Die Zugspitze", "Zugspitze"], note:"2.962 Meter hoch." },
+  { c:"general", q:"Vervollständige: „Morgenstund hat …“", answers:["Gold im Mund", "Gold"] },
+  { c:"general", q:"Vervollständige: „Der Apfel fällt nicht weit vom …“", answers:["Stamm"] },
+  { c:"general", q:"Vervollständige: „Wer zuletzt lacht, …“", answers:["lacht am besten", "am besten", "lacht"] },
+  { c:"general", q:"Vervollständige: „Reden ist Silber, Schweigen ist …“", answers:["Gold"] },
+  { c:"general", q:"Vervollständige: „Ein blindes Huhn findet auch mal ein …“", answers:["Korn"] },
+  { c:"general", q:"Vervollständige: „Aller Anfang ist …“", answers:["schwer"] },
+  { c:"general", q:"Wie nennt man ein Wort, das vorwärts und rückwärts gleich lautet, z. B. „Otto“?", answers:["Palindrom"], note:"Weitere Beispiele: Lagerregal, Anna, Reliefpfeiler." },
+
+  /* ===================== Promis & Stars ===================== */
+  { c:"promis", q:"Wie heißt der Schauspieler, der Captain Jack Sparrow spielte?", answers:["Johnny Depp", "Depp"] },
+  { c:"promis", q:"Wer moderiert die Quizshow „Wer wird Millionär?“", answers:["Günther Jauch", "Jauch", "Guenther Jauch"] },
+  { c:"promis", q:"Wer war der Frontmann der Band Queen?", answers:["Freddie Mercury", "Mercury"] },
+  { c:"promis", q:"Wer führte Regie bei „Titanic“ und „Avatar“?", answers:["James Cameron", "Cameron"] },
+  { c:"promis", q:"Wie heißt die Autorin der Harry-Potter-Bücher?", answers:["J. K. Rowling", "Rowling", "Joanne K. Rowling"] },
+  { c:"promis", q:"Welcher Wissenschaftler entwickelte die Relativitätstheorie?", answers:["Albert Einstein", "Einstein"] },
+  { c:"promis", q:"Wer war der erste Mensch auf dem Mond?", answers:["Neil Armstrong", "Armstrong"] },
+  { c:"promis", q:"Wer gründete die Firmen Tesla und SpaceX?", answers:["Elon Musk", "Musk"] },
+  { c:"promis", q:"Wer malte die „Sternennacht“?", answers:["Vincent van Gogh", "van Gogh", "Gogh"] },
+  { c:"promis", q:"Wie heißt die Schauspielerin, die Hermione Granger spielte?", answers:["Emma Watson", "Watson"] },
+  { c:"promis", q:"Welcher Boxer nannte sich selbst „The Greatest“?", answers:["Muhammad Ali", "Mohammed Ali", "Ali"] },
+  { c:"promis", q:"Wer schrieb „Romeo und Julia“?", answers:["William Shakespeare", "Shakespeare"] },
+  { c:"promis", q:"Wer war die erste Frau, die einen Nobelpreis erhielt?", answers:["Marie Curie", "Curie"] },
+  { c:"promis", q:"Wer gründete Microsoft?", answers:["Bill Gates", "Gates"] },
+  { c:"promis", q:"Welcher Schauspieler spielte den Joker in „The Dark Knight“?", answers:["Heath Ledger", "Ledger"] },
+  { c:"promis", q:"Wer schrieb „Die Verwandlung“ über Gregor Samsa?", answers:["Franz Kafka", "Kafka"] },
+  { c:"promis", q:"Wie hieß der französische Kaiser, der 1815 bei Waterloo verlor?", answers:["Napoleon Bonaparte", "Napoleon"] },
+  { c:"promis", q:"Wie heißt die erste deutsche Bundeskanzlerin?", answers:["Angela Merkel", "Merkel"] },
+  { c:"promis", q:"Welcher deutsche Fußballer trägt den Beinamen „Der Kaiser“?", answers:["Franz Beckenbauer", "Beckenbauer"] },
+  { c:"promis", q:"Wer spielte die Hauptrolle in „Forrest Gump“?", answers:["Tom Hanks", "Hanks"] },
+  { c:"promis", q:"Wer war der erste schwarze Präsident der USA?", answers:["Barack Obama", "Obama"] },
+  { c:"promis", q:"Welcher Erfinder gilt als Pionier der Glühbirne?", answers:["Thomas Edison", "Edison"] },
+  { c:"promis", q:"Wer schrieb „Der kleine Prinz“?", answers:["Antoine de Saint-Exupéry", "Saint-Exupéry", "Exupéry"] },
+  { c:"promis", q:"Wer gründete Facebook?", answers:["Mark Zuckerberg", "Zuckerberg"] },
+  { c:"promis", q:"Welcher Künstler gestaltete die Sixtinische Kapelle in Rom?", answers:["Michelangelo"] },
+  { c:"promis", q:"Wie heißt der Papst, der 2013 gewählt wurde?", answers:["Franziskus", "Papst Franziskus", "Bergoglio"] },
+  { c:"promis", q:"Wer schrieb die „Buddenbrooks“?", answers:["Thomas Mann", "Mann"] },
+  { c:"promis", q:"Welche Schauspielerin spielte Rose in „Titanic“?", answers:["Kate Winslet", "Winslet"] },
+
+  /* ===================== Musik ===================== */
+  { c:"musik", q:"Wer sang den Hit „Thriller“?", answers:["Michael Jackson", "Jackson"] },
+  { c:"musik", q:"Wie heißt die Band um Sänger Mick Jagger?", answers:["The Rolling Stones", "Rolling Stones"] },
+  { c:"musik", q:"Welche Band sang „Stairway to Heaven“?", answers:["Led Zeppelin", "Zeppelin"] },
+  { c:"musik", q:"Wie nennt man die vier Musiker aus Liverpool mit den Vornamen John, Paul, George und Ringo?", answers:["The Beatles", "Beatles"] },
+  { c:"musik", q:"Wer komponierte die Oper „Die Zauberflöte“?", answers:["Wolfgang Amadeus Mozart", "Mozart"] },
+  { c:"musik", q:"Wie viele Sinfonien vollendete Beethoven?", answers:["Neun", "9"] },
+  { c:"musik", q:"Wer ist als „King of Rock and Roll“ bekannt?", answers:["Elvis Presley", "Elvis", "Presley"] },
+  { c:"musik", q:"Wer sang „Griechischer Wein“?", answers:["Udo Jürgens", "Jürgens", "Udo Juergens"] },
+  { c:"musik", q:"Wer sang „Rolling in the Deep“?", answers:["Adele"] },
+  { c:"musik", q:"Wie heißt die Band um Sänger Bono?", answers:["U2"] },
+  { c:"musik", q:"Welcher Gitarrist starb 1970 mit 27 Jahren und hieß mit Vornamen Jimi?", answers:["Jimi Hendrix", "Hendrix"] },
+  { c:"musik", q:"In welcher Stadt entstand in den 1970er-Jahren die Hip-Hop-Kultur?", answers:["New York", "Bronx"], note:"Genauer: in der Bronx in New York." },
+  { c:"musik", q:"Welches ist die höchste weibliche Gesangsstimme?", answers:["Sopran"] },
+  { c:"musik", q:"Wie heißt das berühmteste Musikfestival in England?", answers:["Glastonbury"] },
+  { c:"musik", q:"Wer sang „Blinding Lights“?", answers:["The Weeknd", "Weeknd"] },
+  { c:"musik", q:"Wer komponierte das Klavierstück „Für Elise“?", answers:["Ludwig van Beethoven", "Beethoven"] },
+  { c:"musik", q:"Wie viele Tasten hat ein klassisches Klavier?", answers:["88", "achtundachtzig"] },
+  { c:"musik", q:"Wer sang „Bad Guy“?", answers:["Billie Eilish", "Eilish"] },
+  { c:"musik", q:"Welche britische Band sang „Wonderwall“?", answers:["Oasis"] },
+  { c:"musik", q:"Wer sang „Mambo“ und „Mensch“?", answers:["Herbert Grönemeyer", "Grönemeyer", "Gronemeyer"] },
+  { c:"musik", q:"Welcher Nena-Song von 1983 dreht sich um Luftballons?", answers:["99 Luftballons", "Luftballons", "neunundneunzig Luftballons"] },
+  { c:"musik", q:"Wer komponierte „Die vier Jahreszeiten“?", answers:["Antonio Vivaldi", "Vivaldi"] },
+  { c:"musik", q:"Welcher Reggae-Musiker wurde mit „No Woman, No Cry“ weltberühmt?", answers:["Bob Marley", "Marley"] },
+  { c:"musik", q:"Welche deutsche Band veröffentlichte „Du hast“ und „Sonne“?", answers:["Rammstein"] },
+  { c:"musik", q:"Wer sang „Shape of You“?", answers:["Ed Sheeran", "Sheeran"] },
+  { c:"musik", q:"Aus welchem Land stammt der Komponist Frédéric Chopin?", answers:["Polen"] },
+  { c:"musik", q:"Welches Instrument spielte der Jazzmusiker Louis Armstrong?", answers:["Trompete"] },
+  { c:"musik", q:"Welche Sängerin landete die Hits „Umbrella“ und „Diamonds“?", answers:["Rihanna"] },
+  { c:"musik", q:"Welche Band sang „Smells Like Teen Spirit“?", answers:["Nirvana"] },
+  { c:"musik", q:"In welchem Land wurde der Eurovision Song Contest erfunden?", answers:["Schweiz"], note:"1956 in Lugano." },
+
+  /* ===================== Film & Serien ===================== */
+  { c:"film", q:"Wie heißt der Zauberer mit der Blitznarbe?", answers:["Harry Potter"] },
+  { c:"film", q:"Wer ist das Familienoberhaupt der „Simpsons“?", answers:["Homer Simpson", "Homer"] },
+  { c:"film", q:"Wer schrieb „Der Herr der Ringe“?", answers:["J. R. R. Tolkien", "Tolkien"] },
+  { c:"film", q:"Wer spielte Iron Man im Marvel-Universum?", answers:["Robert Downey Jr.", "Robert Downey", "Downey"] },
+  { c:"film", q:"Wie heißt der Bösewicht in „Star Wars“ mit dem schwarzen Helm?", answers:["Darth Vader", "Vader"] },
+  { c:"film", q:"Wie heißt die spanische Netflix-Serie über einen großen Bankraub?", answers:["Haus des Geldes", "La Casa de Papel", "Casa de Papel"] },
+  { c:"film", q:"Wie heißt die koreanische Netflix-Serie mit den tödlichen Kinderspielen?", answers:["Squid Game"] },
+  { c:"film", q:"In welchem Disney-Film geht es um das Löwenjunge Simba?", answers:["Der König der Löwen", "König der Löwen"] },
+  { c:"film", q:"Wie viele Bände hat die Harry-Potter-Reihe?", answers:["Sieben", "7"] },
+  { c:"film", q:"Welches Studio steht hinter den Avengers-Filmen?", answers:["Marvel", "Marvel Studios"], note:"Marvel gehört zu Disney." },
+  { c:"film", q:"In welcher fiktiven Stadt lebt Batman?", answers:["Gotham", "Gotham City"] },
+  { c:"film", q:"Wer führte Regie bei „Inception“ und „Interstellar“?", answers:["Christopher Nolan", "Nolan"] },
+  { c:"film", q:"Welche Serie spielt in Hawkins und dreht sich um das „Upside Down“?", answers:["Stranger Things"] },
+  { c:"film", q:"Wer führte bei der Original-„Star Wars“-Trilogie Regie?", answers:["George Lucas", "Lucas"] },
+  { c:"film", q:"Welche Filmreihe dreht sich um die Familie Corleone?", answers:["Der Pate", "Pate"] },
+  { c:"film", q:"Wer ist der Hauptdarsteller der „Mission: Impossible“-Filme?", answers:["Tom Cruise", "Cruise"] },
+  { c:"film", q:"Welche Serie handelt von einem Chemielehrer, der Drogen kocht?", answers:["Breaking Bad"] },
+  { c:"film", q:"Aus welchem Land stammt die Netflix-Serie „Dark“?", answers:["Deutschland"] },
+  { c:"film", q:"In welchem Disney-Film gibt es den Schneemann Olaf?", answers:["Die Eiskönigin", "Eiskönigin", "Frozen"] },
+  { c:"film", q:"Welcher Schauspieler spielte 2006 in „Casino Royale“ den James Bond?", answers:["Daniel Craig", "Craig"] },
+  { c:"film", q:"In welcher Filmreihe fällt der Satz „Möge die Macht mit dir sein“?", answers:["Star Wars"] },
+  { c:"film", q:"Wie heißt der berühmteste britische Detektiv von Arthur Conan Doyle?", answers:["Sherlock Holmes", "Sherlock", "Holmes"] },
+  { c:"film", q:"Wie heißt der wichtigste Filmpreis der Welt?", answers:["Der Oscar", "Oscar"] },
+  { c:"film", q:"Wie heißt der Gefährte, der Frodo bis zum Schicksalsberg begleitet?", answers:["Samweis Gamdschie", "Sam Gamdschie", "Sam"] },
+
+  /* ===================== Sport ===================== */
+  { c:"sport", q:"Alle wie viele Jahre findet die Fußball-WM statt?", answers:["Alle vier Jahre", "vier", "4"] },
+  { c:"sport", q:"Welches Land wurde 2014 Fußball-Weltmeister?", answers:["Deutschland"] },
+  { c:"sport", q:"Wie viele Spieler hat eine Handballmannschaft auf dem Feld?", answers:["Sieben", "7"] },
+  { c:"sport", q:"In welcher Sportart wird in Wimbledon gespielt?", answers:["Tennis"] },
+  { c:"sport", q:"Wie viele Ringe hat das olympische Symbol?", answers:["Fünf", "5"] },
+  { c:"sport", q:"Wie heißt der deutsche Rekordmeister im Fußball?", answers:["FC Bayern München", "Bayern München", "Bayern"] },
+  { c:"sport", q:"In welcher Höhe hängt ein Basketballkorb?", answers:["3,05 Meter", "3,05", "305"] },
+  { c:"sport", q:"Wie lang ist ein Marathon?", answers:["42,195 Kilometer", "42,195", "42 Kilometer", "42"] },
+  { c:"sport", q:"Welche Nationalmannschaft nennt man „Squadra Azzurra“?", answers:["Italien"] },
+  { c:"sport", q:"Wie viele Spieler stehen beim Volleyball pro Team auf dem Feld?", answers:["Sechs", "6"] },
+  { c:"sport", q:"In welcher Sportart gibt es den „Slam Dunk“?", answers:["Basketball"] },
+  { c:"sport", q:"Wer hält den Weltrekord über 100 Meter?", answers:["Usain Bolt", "Bolt"] },
+  { c:"sport", q:"Wie lange dauert ein Drittel beim Eishockey?", answers:["20 Minuten", "20", "zwanzig"] },
+  { c:"sport", q:"Aus welchem italienischen Ort stammt das Formel-1-Team Ferrari?", answers:["Maranello"] },
+  { c:"sport", q:"Wer ist Rekordweltmeister der Formel 1?", answers:["Michael Schumacher", "Schumacher", "Lewis Hamilton", "Hamilton"], note:"Beide haben sieben Titel." },
+  { c:"sport", q:"Wie heißt das große Sandplatz-Tennisturnier in Paris?", answers:["French Open", "Roland Garros"] },
+  { c:"sport", q:"Wie viele Punkte bringt ein Touchdown im American Football?", answers:["Sechs", "6"] },
+  { c:"sport", q:"Wie viele Minuten dauert ein reguläres Fußballspiel?", answers:["90 Minuten", "90", "neunzig"] },
+  { c:"sport", q:"Wie heißt der wichtigste europäische Vereinswettbewerb im Fußball?", answers:["Champions League", "UEFA Champions League"] },
+  { c:"sport", q:"Welcher deutsche Fußballer hat die meisten Länderspiele (Männer)?", answers:["Lothar Matthäus", "Matthäus", "Matthaeus"] },
+
+  /* ===================== Geografie ===================== */
+  { c:"geo", q:"Wie heißt die Hauptstadt von Kanada?", answers:["Ottawa"], note:"Nicht Toronto!" },
+  { c:"geo", q:"Welcher ist der größte Kontinent der Erde?", answers:["Asien"] },
+  { c:"geo", q:"Welches ist das kleinste Land der Welt?", answers:["Vatikanstadt", "Vatikan", "Vatikanstaat"] },
+  { c:"geo", q:"Welcher Ozean ist der größte?", answers:["Der Pazifik", "Pazifik", "Pazifischer Ozean"] },
+  { c:"geo", q:"Wie viele Länder grenzen an Deutschland?", answers:["Neun", "9"] },
+  { c:"geo", q:"Welcher Fluss fließt durch Ägypten und gilt als einer der längsten der Welt?", answers:["Der Nil", "Nil"] },
+  { c:"geo", q:"In welcher Stadt steht der Eiffelturm?", answers:["Paris"] },
+  { c:"geo", q:"Welches Land nennt man „Land der aufgehenden Sonne“?", answers:["Japan"] },
+  { c:"geo", q:"Wie heißt die Hauptstadt von Italien?", answers:["Rom"] },
+  { c:"geo", q:"Wie heißen die zwei Länder mit mehr als einer Milliarde Einwohner?", answers:["Indien und China"], all:["indien", "china"] },
+  { c:"geo", q:"Welcher Kontinent ist der kälteste und trockenste?", answers:["Die Antarktis", "Antarktis", "Antarktika"] },
+  { c:"geo", q:"Wie heißt die Hauptstadt der USA?", answers:["Washington", "Washington D.C."], note:"Nicht New York!" },
+  { c:"geo", q:"Welches Meer trennt Europa von Afrika?", answers:["Das Mittelmeer", "Mittelmeer"] },
+  { c:"geo", q:"In welchem Land steht der Mount Everest?", answers:["Nepal", "China", "Tibet"], note:"In Nepal, an der Grenze zu China (Tibet)." },
+  { c:"geo", q:"Welcher ist der größte See Afrikas?", answers:["Der Victoriasee", "Victoriasee", "Victoria"] },
+  { c:"geo", q:"Wie heißt die Hauptstadt der Schweiz?", answers:["Bern"] },
+  { c:"geo", q:"Wie heißt die Hauptstadt von Brasilien?", answers:["Brasília", "Brasilia"] },
+  { c:"geo", q:"Welcher Fluss ist der wasserreichste der Welt?", answers:["Der Amazonas", "Amazonas"] },
+  { c:"geo", q:"Wie heißt die Hauptstadt der Türkei?", answers:["Ankara"], note:"Nicht Istanbul!" },
+  { c:"geo", q:"Welches ist das flächengrößte Land Südamerikas?", answers:["Brasilien"] },
+  { c:"geo", q:"Wie heißt die Hauptstadt von Spanien?", answers:["Madrid"] },
+
+  /* ===================== Geschichte ===================== */
+  { c:"geschichte", q:"In welchem Jahr endete der Zweite Weltkrieg?", answers:["1945"] },
+  { c:"geschichte", q:"In welchem Jahr begann der Zweite Weltkrieg?", answers:["1939"] },
+  { c:"geschichte", q:"Wer war der erste Bundeskanzler der Bundesrepublik Deutschland?", answers:["Konrad Adenauer", "Adenauer"] },
+  { c:"geschichte", q:"In welchem Jahr wurde die Berliner Mauer gebaut?", answers:["1961"] },
+  { c:"geschichte", q:"In welchem Jahr fiel die Berliner Mauer?", answers:["1989"] },
+  { c:"geschichte", q:"In welchem Jahr wurde Deutschland wiedervereinigt?", answers:["1990"] },
+  { c:"geschichte", q:"Wer erreichte 1492 als Europäer Amerika?", answers:["Christoph Kolumbus", "Kolumbus"] },
+  { c:"geschichte", q:"In welchem Jahr begann der Erste Weltkrieg?", answers:["1914"] },
+  { c:"geschichte", q:"In welchem Jahr endete der Erste Weltkrieg?", answers:["1918"] },
+  { c:"geschichte", q:"In welchem Jahr begann die Französische Revolution?", answers:["1789"] },
+  { c:"geschichte", q:"Wer war der erste Präsident der USA?", answers:["George Washington", "Washington"] },
+  { c:"geschichte", q:"In welchem Jahr wurde die Bundesrepublik Deutschland gegründet?", answers:["1949"] },
+  { c:"geschichte", q:"Wer erfand den Buchdruck mit beweglichen Metall-Lettern?", answers:["Johannes Gutenberg", "Gutenberg"] },
+  { c:"geschichte", q:"Welche Stadt war die Hauptstadt der DDR?", answers:["Ost-Berlin", "Ostberlin", "Ost Berlin"] },
+  { c:"geschichte", q:"Wer war der erste Mensch im Weltraum?", answers:["Juri Gagarin", "Gagarin"] },
+  { c:"geschichte", q:"In welchem Jahr sank die Titanic?", answers:["1912"] },
+  { c:"geschichte", q:"Wie hieß der erste Kaiser des Römischen Reiches?", answers:["Augustus", "Octavian", "Oktavian"] },
+  { c:"geschichte", q:"Wer war der Diktator des Deutschen Reiches von 1933 bis 1945?", answers:["Adolf Hitler", "Hitler"] },
+  { c:"geschichte", q:"Wer schlug 1517 seine Thesen an und löste die Reformation aus?", answers:["Martin Luther", "Luther"] },
+  { c:"geschichte", q:"Welches Volk baute die Pyramiden von Gizeh?", answers:["Die Ägypter", "Ägypter", "Aegypter", "Ägypten"] },
+  { c:"geschichte", q:"Wer erreichte 1911 als erster Mensch den Südpol?", answers:["Roald Amundsen", "Amundsen"] },
+
+  /* ===================== Wissen & Natur ===================== */
+  { c:"science", q:"Wie viele Planeten hat unser Sonnensystem?", answers:["Acht", "8"] },
+  { c:"science", q:"Welches Gas atmen Menschen aus?", answers:["Kohlendioxid", "CO2", "CO₂"] },
+  { c:"science", q:"Welcher Stoff macht die Blätter von Pflanzen grün?", answers:["Chlorophyll"] },
+  { c:"science", q:"Wie heißt der Vorgang, bei dem Pflanzen mit Licht Zucker produzieren?", answers:["Photosynthese"] },
+  { c:"science", q:"Welches ist das größte Tier der Erde?", answers:["Der Blauwal", "Blauwal"] },
+  { c:"science", q:"Wie schnell ist das Licht ungefähr?", answers:["300.000 km/s", "300000", "Lichtgeschwindigkeit"], note:"Rund 300.000 Kilometer pro Sekunde." },
+  { c:"science", q:"Welches ist das härteste natürliche Material?", answers:["Der Diamant", "Diamant"] },
+  { c:"science", q:"Wie lange braucht das Sonnenlicht bis zur Erde?", answers:["Acht Minuten", "8", "acht"] },
+  { c:"science", q:"Welche chemische Formel hat Wasser?", answers:["H2O", "H₂O", "Wasser"] },
+  { c:"science", q:"Welches Tier ist das schnellste an Land?", answers:["Der Gepard", "Gepard"] },
+  { c:"science", q:"Wie viele Chromosomen hat ein Mensch?", answers:["46"] },
+  { c:"science", q:"Bei wie viel Grad Celsius siedet Wasser auf Meereshöhe?", answers:["100 Grad", "100", "hundert"] },
+  { c:"science", q:"Welches ist die größte heiße Wüste der Welt?", answers:["Die Sahara", "Sahara"] },
+  { c:"science", q:"Welcher Planet wird „roter Planet“ genannt?", answers:["Der Mars", "Mars"] },
+  { c:"science", q:"Welches Gas ist der häufigste Bestandteil der Luft?", answers:["Stickstoff"], note:"Rund 78 Prozent." },
+  { c:"science", q:"Wie heißt der kleinste Knochen im menschlichen Körper?", answers:["Der Steigbügel", "Steigbügel", "Steigbuegel"], note:"Er sitzt im Ohr." },
+  { c:"science", q:"Wie viel Grad Celsius entsprechen dem absoluten Nullpunkt?", answers:["−273,15", "-273,15", "273,15", "273"] },
+  { c:"science", q:"Welcher Vogel ist das schnellste Tier der Welt im Sturzflug?", answers:["Der Wanderfalke", "Wanderfalke"] },
+  { c:"science", q:"Welches ist das größte Raubtier an Land?", answers:["Der Eisbär", "Eisbär", "Eisbaer"] },
+  { c:"science", q:"Wie viele Zähne hat ein erwachsener Hund ungefähr?", answers:["42"] },
+
+  /* ===================== Essen & Trinken ===================== */
+  { c:"essen", q:"Aus welchem Land kommt Sushi ursprünglich?", answers:["Japan"] },
+  { c:"essen", q:"Was ist die Hauptzutat von Guacamole?", answers:["Avocado"] },
+  { c:"essen", q:"Welches Gewürz gilt als das teuerste der Welt?", answers:["Safran"] },
+  { c:"essen", q:"In welchem Land wurde Pizza erfunden?", answers:["Italien"] },
+  { c:"essen", q:"Aus welchem Land stammt das Gericht Paella?", answers:["Spanien"] },
+  { c:"essen", q:"Was ist die grüne Hauptzutat von Pesto Genovese?", answers:["Basilikum"] },
+  { c:"essen", q:"Aus welchem Land kommt das Getränk Mate ursprünglich?", answers:["Argentinien", "Südamerika", "Uruguay", "Brasilien"], note:"Vor allem Argentinien, Uruguay und Brasilien." },
+  { c:"essen", q:"Aus welchem Land stammt die Soße Tzatziki?", answers:["Griechenland"] },
+  { c:"essen", q:"Was ist die Hauptzutat von Hummus?", answers:["Kichererbsen", "Kichererbse"] },
+  { c:"essen", q:"Welche Frucht ist die Grundlage von Marzipan?", answers:["Mandel", "Mandeln"] },
+  { c:"essen", q:"Welcher Teig wird für eine klassische Pizza verwendet?", answers:["Hefeteig"] },
+  { c:"essen", q:"Wie viele Kalorien hat ein Gramm Fett ungefähr?", answers:["Neun", "9"] }
+];
+
+/* =========================================================
+   Antwort-Prüfung (tolerant)
+   ========================================================= */
+const ARTICLES = ["der", "die", "das", "den", "dem", "des", "ein", "eine", "einen", "einem", "eines", "the"];
+
+/* Kleinschreibung, Umlaute auflösen, Sonderzeichen weg, führende Artikel weg */
+function norm(s) {
+  let t = String(s)
+    .toLowerCase()
+    .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  const parts = t.split(" ");
+  while (parts.length > 1 && ARTICLES.indexOf(parts[0]) !== -1) parts.shift();
+  return parts.join(" ");
+}
+
+/* Levenshtein-Distanz */
+function distance(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  let prev = [];
+  for (let j = 0; j <= b.length; j++) prev[j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(
+        prev[j] + 1,
+        cur[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+function closeEnough(input, target) {
+  const tol = target.length >= 20 ? 3 : target.length >= 12 ? 2 : target.length >= 6 ? 1 : 0;
+  return tol > 0 && distance(input, target) <= tol;
+}
+
+/* Passt die Eingabe auf eine akzeptierte Antwort? */
+function accepts(input, target) {
+  if (!target) return false;
+  if (input === target) return true;
+
+  const numeric = /^[0-9]+$/.test(target);
+  if (target.length >= 3 || numeric) {
+    const esc = target.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp("(^| )" + esc + "( |$)").test(input)) return true;
+  }
+  return closeEnough(input, target);
+}
+
+function isCorrect(input, item) {
+  const value = norm(input);
+  if (!value) return false;
+  if (item.all) return item.all.every((k) => accepts(value, norm(k)));
+  return item.answers.some((a) => accepts(value, norm(a)));
+}
+
+/* =========================================================
+   Spiel-Logik
+   ========================================================= */
+const screenIds = ["screen-start", "screen-quiz", "screen-end"];
+const el = (id) => document.getElementById(id);
+
+let deck = [];
+let idx = 0;
+let phase = "input";   // "input" | "checked"
+let correct = false;
+let rightCount = 0;
+let wrongCount = 0;
+let streak = 0;          // richtige Antworten in Folge
+let selected = new Set(Object.keys(CATEGORIES));
+
+/* ---------- Start-Ansicht aufbauen ---------- */
+function buildChips() {
+  const box = el("chips");
+  box.innerHTML = "";
+  Object.keys(CATEGORIES).forEach((key) => {
+    const cat = CATEGORIES[key];
+    const count = QUESTIONS.filter((x) => x.c === key).length;
+
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip on";
+    chip.dataset.key = key;
+    chip.innerHTML =
+      '<span class="dot" style="background:' + cat.color + ';color:' + cat.color + '"></span>' +
+      "<span>" + cat.name + "</span>" +
+      '<span class="count">' + count + "</span>";
+
+    chip.addEventListener("click", () => {
+      if (selected.has(key)) {
+        selected.delete(key);
+        chip.classList.remove("on");
+      } else {
+        selected.add(key);
+        chip.classList.add("on");
+      }
+      updateStartHint();
+    });
+
+    box.appendChild(chip);
+  });
+}
+
+function buildPresets() {
+  const box = el("presets");
+  box.innerHTML = "";
+  PRESETS.forEach((p) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "preset";
+    b.textContent = p.name;
+    b.addEventListener("click", () => {
+      selected = new Set(p.keys);
+      document.querySelectorAll(".chip").forEach((chip) => {
+        chip.classList.toggle("on", selected.has(chip.dataset.key));
+      });
+      updateStartHint();
+    });
+    box.appendChild(b);
+  });
+}
+
+function poolForSelection() {
+  return QUESTIONS.filter((x) => selected.has(x.c));
+}
+
+function updateStartHint() {
+  const n = poolForSelection().length;
+  el("startBtn").disabled = n === 0;
+  el("startHint").textContent =
+    n === 0 ? "Bitte mindestens eine Kategorie auswählen." : n + " Fragen in der Runde.";
+}
+
+/* ---------- Ansichten wechseln ---------- */
+function showScreen(name) {
+  screenIds.forEach((id) => el(id).classList.toggle("active", id === name));
+  wipe();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/* ---------- Quiz starten ---------- */
+function startQuiz() {
+  deck = poolForSelection();
+  if (!deck.length) return;
+  if (el("shuffle").checked) {
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = deck[i]; deck[i] = deck[j]; deck[j] = t;
+    }
+  }
+  idx = 0;
+  rightCount = 0;
+  wrongCount = 0;
+  streak = 0;
+  document.body.classList.remove("hot");
+  FW.stop();
+  SND.fx.whoosh();
+  confetti(50);
+  /* Erst die Show-Einlage, dann die erste Frage. */
+  runIntro(() => {
+    showScreen("screen-quiz");
+    MUSIC.start();
+    renderQuestion();
+  });
+}
+
+function scoring() { return el("scoring").checked; }
+
+/* ---------- Frage anzeigen ---------- */
+function renderQuestion() {
+  const item = deck[idx];
+  const cat = CATEGORIES[item.c];
+
+  phase = "input";
+  correct = false;
+
+  const badge = el("catBadge");
+  badge.style.borderColor = cat.color + "66";
+  badge.style.background = cat.color + "1f";
+  badge.querySelector(".dot").style.background = cat.color;
+  el("catName").textContent = cat.name;
+
+  updateCounter();
+  el("bar").style.width = (((idx + 1) / deck.length) * 100) + "%";
+
+  const qt = el("qtext");
+  qt.textContent = item.q;
+  qt.classList.remove("anim-in");
+  void qt.offsetWidth;
+  qt.classList.add("anim-in");
+
+  const input = el("answerInput");
+  input.value = "";
+  input.disabled = false;
+  input.className = "";
+  input.placeholder = "Antwort hier eintippen…";
+
+  /* Die Auflösung muss sofort verschwinden – ohne Einklapp-Animation.
+     Sonst blitzt beim Wechsel kurz die Lösung der neuen Frage auf. */
+  const answerBox = el("answer");
+  answerBox.style.transition = "none";
+  answerBox.className = "answer";
+  el("verdict").textContent = "";
+  el("solution").textContent = item.answers[0];
+  el("note").textContent = item.note || "";
+  el("note").style.display = item.note ? "block" : "none";
+  void answerBox.offsetWidth;
+  answerBox.style.transition = "";
+
+  el("checkBtn").style.display = "";
+  el("checkBtn").disabled = false;
+  el("nextBtn").style.display = "none";
+  el("dontKnowBtn").disabled = false;
+  el("skipBtn").disabled = false;
+
+  input.focus();
+  SND.fx.pop();
+}
+
+function updateCounter() {
+  const text = scoring()
+    ? "Ergebnis " + rightCount + " : " + wrongCount
+    : "";
+  const series = (streak >= 2)
+    ? ' <span class="streak">🔥 Serie &times;' + streak + "</span>"
+    : "";
+  el("counter").innerHTML =
+    (text ? '<span class="score">' + text + "</span> &middot; " : "") +
+    "Frage " + (idx + 1) + " von " + deck.length + series;
+  /* Ab drei richtigen Antworten glüht der Hintergrund mit. */
+  document.body.classList.toggle("hot", streak >= 3);
+}
+
+/* ---------- Antwort prüfen ---------- */
+function checkAnswer() {
+  if (phase !== "input") return;
+  const item = deck[idx];
+  const input = el("answerInput");
+  const raw = input.value;
+
+  if (!raw.trim()) { input.focus(); return; }
+
+  correct = isCorrect(raw, item);
+  phase = "checked";
+
+  if (correct) { rightCount++; streak++; } else { wrongCount++; streak = 0; }
+
+  input.disabled = true;
+  input.className = correct ? "good" : "bad";
+
+  if (correct) {
+    SND.fx.correct(streak - 1);
+    confetti(streak >= 3 ? 130 : 80);
+    emojiBurst(streak >= 3 ? 9 : 5);
+    flash();
+    if (streak >= 3) setTimeout(() => SND.fx.fever(), 170);
+    if (streak >= 5) cannons();
+  } else {
+    SND.fx.wrong();
+    shake(el("screen-quiz"));
+  }
+
+  const box = el("answer");
+  box.className = "answer show " + (correct ? "ok" : "bad");
+  el("verdict").textContent = correct ? "Richtig!" : "Leider falsch";
+  el("solution").textContent = item.answers[0];
+
+  el("checkBtn").style.display = "none";
+  el("nextBtn").style.display = "";
+  el("nextBtn").textContent = idx === deck.length - 1 ? "Quiz beenden" : "Nächste Frage";
+  el("dontKnowBtn").disabled = true;
+  updateCounter();
+
+  el("nextBtn").focus();
+}
+
+/* ---------- "Weiß ich nicht": Lösung zeigen, ohne zu prüfen ---------- */
+function giveUp() {
+  if (phase !== "input") return;
+  const item = deck[idx];
+  const input = el("answerInput");
+
+  correct = false;
+  phase = "checked";
+  wrongCount++;
+  streak = 0;
+  SND.fx.giveUp();
+  shake(el("screen-quiz"));
+
+  input.disabled = true;
+  input.className = "bad";
+  input.placeholder = "—";
+
+  el("answer").className = "answer show bad";
+  el("verdict").textContent = "Die Lösung wäre gewesen";
+  el("solution").textContent = item.answers[0];
+  el("note").textContent = item.note || "";
+  el("note").style.display = item.note ? "block" : "none";
+
+  el("checkBtn").style.display = "none";
+  el("nextBtn").style.display = "";
+  el("nextBtn").textContent = idx === deck.length - 1 ? "Quiz beenden" : "Nächste Frage";
+  el("dontKnowBtn").disabled = true;
+  updateCounter();
+
+  el("nextBtn").focus();
+}
+
+/* ---------- Weiter ---------- */
+function nextQuestion() {
+  idx++;
+  if (idx >= deck.length) finish(); else renderQuestion();
+}
+
+function finish() {
+  const total = rightCount + wrongCount;
+  const answered = deck.length;
+  const quote = total ? Math.round((rightCount / total) * 100) : 0;
+
+  el("endTitle").textContent = scoring()
+    ? (quote >= 80 ? "Stark! 🏆" : quote >= 50 ? "Solide Runde!" : "Nächstes Mal besser!")
+    : "Alle Fragen durch!";
+
+  el("endText").textContent = scoring()
+    ? "Ihr habt " + answered + " Fragen gespielt. Noch eine Runde für eine bessere Quote?"
+    : "Ihr habt alle " + answered + " Fragen der Runde gespielt. Noch eine Runde?";
+
+  if (scoring()) {
+    el("endStats").style.display = "flex";
+    el("stRight").textContent = rightCount;
+    el("stWrong").textContent = wrongCount;
+    el("stRate").textContent = quote + " %";
+  } else {
+    el("endStats").style.display = "none";
+  }
+
+  MUSIC.stop();
+
+  /* Gute Quote wird gefeiert, schwache Runde klingt versöhnlich. */
+  if (!scoring() || quote >= 80) {
+    SND.fx.win();
+    flash();
+    confetti(220);
+    cannons();
+    emojiBurst(14);
+    FW.play(5);
+  } else if (quote >= 50) {
+    SND.fx.correct(2);
+    confetti(100);
+    cannons();
+  } else {
+    SND.fx.lose();
+  }
+
+  showScreen("screen-end");
+}
+
+function backToMenu() {
+  MUSIC.stop();
+  FW.stop();
+  updateStartHint();
+  showScreen("screen-start");
+}
+
+/* ---------- Events ---------- */
+el("startBtn").addEventListener("click", startQuiz);
+el("checkBtn").addEventListener("click", checkAnswer);
+el("nextBtn").addEventListener("click", nextQuestion);
+el("dontKnowBtn").addEventListener("click", giveUp);
+el("skipBtn").addEventListener("click", () => {
+  if (phase === "checked") return;
+  nextQuestion();
+});
+el("quitBtn").addEventListener("click", backToMenu);
+el("againBtn").addEventListener("click", startQuiz);
+el("menuBtn").addEventListener("click", backToMenu);
+el("scoring").addEventListener("change", updateCounter);
+
+/* Enter im Eingabefeld */
+el("answerInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    if (phase === "input") checkAnswer(); else nextQuestion();
+  }
+});
+
+/* Globale Tasten: nur wenn nicht in Eingabefeld oder auf einem Button */
+document.addEventListener("keydown", (e) => {
+  const typing = !!e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA");
+  if (!typing && (e.key === "m" || e.key === "M")) { e.preventDefault(); setSound(!SND.isOn()); return; }
+  if (!typing && (e.key === "n" || e.key === "N")) { e.preventDefault(); setMusic(!MUSIC.isOn()); return; }
+  if (e.key === "Escape") {
+    e.preventDefault();
+    cancelIntro();
+    backToMenu();
+    return;
+  }
+  if (!el("screen-quiz").classList.contains("active")) return;
+  if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON")) return;
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    if (phase === "input") checkAnswer(); else nextQuestion();
+  }
+});
+
+/* =========================================================
+   Mehrgeräte-Modi: Raum aufmachen oder per Code beitreten
+   Läuft ohne Server – die Spielseite verbindet die Geräte direkt.
+   ========================================================= */
+const MULTI_MODES = [
+  { key: "quizduell", icon: "⚔️", name: "Quizduell", desc: "Alle beantworten dieselbe Frage – jede richtige Antwort bringt einen Punkt.", minPlayers: 2, maxPlayers: 16 },
+  { key: "wlam", icon: "🎭", name: "Wer lügt am besten?", desc: "Alle erfinden eine Antwort, danach wird die überzeugendste gewählt.", minPlayers: 3, maxPlayers: 16 },
+  { key: "hotzone", icon: "🧠", name: "3 Dumme, 1 Gedanke", desc: "Kommt auf dieselbe Antwort wie die anderen – je größer die Gruppe, desto mehr Punkte.", minPlayers: 3, maxPlayers: 16 },
+  { key: "imposter", icon: "🕵️", name: "Imposter", desc: "Fast alle kennen das geheime Wort – nur der Imposter nicht. Findet ihn.", minPlayers: 4, maxPlayers: 14 },
+  { key: "dumbest", icon: "🔥", name: "Der Dümmste fliegt!", desc: "Jede Runde fliegt der Schlechteste raus, bis einer übrig bleibt.", minPlayers: 3, maxPlayers: 12 },
+  { key: "chatter", icon: "💬", name: "1000 Chatter wurden befragt", desc: "Errate, was die Menge am häufigsten antwortet.", minPlayers: 2, maxPlayers: 16 }
+];
+
+/* Das Spiel liegt je nach Ablageort woanders: von der Festplatte geöffnet im
+   Ordner quiz-room/public, über einen Webserver direkt daneben. */
+function gameUrl(extra) {
+  const base = location.protocol === "file:" ? "quiz-room/public/game.html" : "/game.html";
+  const query = new URLSearchParams({ net: "p2p" });
+  Object.keys(extra || {}).forEach((key) => query.set(key, extra[key]));
+  return new URL(base + "?" + query.toString(), location.href).href;
+}
+
+function playerName() {
+  return (el("playerName").value.trim() || "Gast").slice(0, 18);
+}
+
+/* Namen merken – die Spielseite liest ihn beim Öffnen wieder aus. */
+function openGame(extra) {
+  localStorage.setItem("quizroom.name", playerName());
+  /* Kurze Show-Einlage, dann geht es zur Spielseite. */
+  SND.fx.whoosh();
+  confetti(70);
+  flash();
+  setTimeout(() => { location.href = gameUrl(extra); }, 260);
+}
+
+/* Beim Eintippen zählt nur der Inhalt: "a3f-9kq" wird zu "A3F9KQ". */
+function cleanCode(value) {
+  return String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+/* Der eingegebene Code erscheint als leuchtende Kacheln – so fühlt sich
+   das Beitreten schon wie ein Show-Intro an. */
+function renderCodeTiles(host, value) {
+  if (!host) return;
+  const code = cleanCode(value);
+  host.dataset.code = code;
+  host.innerHTML = "";
+  if (!code) {
+    host.innerHTML = '<span class="code-hint">Dein Code erscheint hier</span>';
+    return;
+  }
+  code.split("").forEach((char, i) => {
+    const tile = document.createElement("span");
+    tile.className = "code-tile" + (/[0-9]/.test(char) ? " num" : "");
+    tile.style.animationDelay = (i * 45) + "ms";
+    tile.textContent = char;
+    host.appendChild(tile);
+  });
+}
+
+function renderMultiModes() {
+  const box = el("modeList");
+  box.innerHTML = "";
+  MULTI_MODES.forEach((mode) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "mode";
+    card.innerHTML =
+      '<div class="top"><span class="icon">' + mode.icon + '</span>' +
+      '<span class="name">' + mode.name + '</span></div>' +
+      '<div class="desc">' + mode.desc + '</div>' +
+      '<div class="meta">' + mode.minPlayers + '&ndash;' + mode.maxPlayers +
+      ' Spieler &middot; Raum aufmachen</div>';
+    card.addEventListener("click", () => openGame({ mode: mode.key }));
+    box.appendChild(card);
+  });
+}
+
+function setMultiHint(message, kind) {
+  const hint = el("multiHint");
+  hint.className = "hint" + (kind ? " status " + kind : "");
+  hint.textContent = message || "";
+}
+
+/* Code eingetippt – die Spielseite übernimmt den Beitritt. */
+function joinRoom() {
+  const code = cleanCode(el("joinCode").value);
+  if (code.length !== 6) {
+    SND.fx.wrong();
+    return setMultiHint("Ein Raum-Code besteht aus sechs Zeichen – zum Beispiel A3F9KQ.", "off");
+  }
+  setMultiHint("Verbinde mit Raum " + code + " …", "ok");
+  openGame({ code: code });
+}
+
+/* ---------- Knöpfe im Mehrgeräte-Teil ---------- */
+el("joinBtn").addEventListener("click", joinRoom);
+el("joinCode").addEventListener("input", (e) => {
+  /* Erst säubern, dann auf sechs Zeichen kürzen – so klappt auch das
+     Einfügen eines Codes wie "a3f-9kq" ohne Abschneiden. */
+  const clean = cleanCode(e.target.value).slice(0, 6);
+  e.target.value = clean;
+  renderCodeTiles(el("joinPreview"), clean);
+  setMultiHint("", "");
+});
+el("joinCode").addEventListener("keydown", (e) => { if (e.key === "Enter") joinRoom(); });
+el("playerName").value = localStorage.getItem("quizroom.name") || "";
+el("playerName").addEventListener("input", () => {
+  localStorage.setItem("quizroom.name", el("playerName").value.trim());
+});
+
+/* ---------- In die Zwischenablage legen ----------
+   navigator.clipboard gibt es nur in sicheren Zusammenhängen (https, localhost,
+   file://). Läuft die Seite über http:// im WLAN, greift der Rückfallweg über
+   ein verstecktes Textfeld. */
+function copyText(text) {
+  function legacy(value) {
+    try {
+      const box = document.createElement("textarea");
+      box.value = value;
+      box.setAttribute("readonly", "");
+      box.style.position = "fixed";
+      box.style.top = "-1000px";
+      document.body.appendChild(box);
+      box.select();
+      const ok = document.execCommand("copy");
+      box.remove();
+      return !!ok;
+    } catch (err) { return false; }
+  }
+
+  return new Promise((resolve) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => resolve(true), () => resolve(legacy(text)));
+      return;
+    }
+    resolve(legacy(text));
+  });
+}
+
+/* ---------- Die Adresse für die Runde ----------
+   Freunde brauchen keine Datei, sondern eine Adresse: Läuft die Seite über einen
+   Webserver, ist es dieselbe URL für alle. Direkt von der Festplatte (file://)
+   gibt es keine Adresse – dann muss der komplette Ordner auf jedes Gerät, sonst
+   meldet der Browser „Zugriff auf die Datei nicht möglich“. */
+function initShareLink() {
+  const field = el("shareUrl");
+  const hint = el("shareHint");
+  const button = el("shareCopyBtn");
+  if (!field || !hint || !button) return;
+
+  if (location.protocol === "file:") {
+    field.value = "Keine Adresse – die Seite liegt auf deiner Festplatte";
+    hint.className = "hint status off";
+    hint.innerHTML =
+      "Von der Festplatte geöffnet (<b>file://</b>) haben deine Freunde diese Seite nicht: " +
+      "Sie brauchen den <b>kompletten Ordner</b> (quiz.html plus quiz-room/) auf ihrem Gerät " +
+      "und öffnen die Datei dort selbst – ein geteilter Link oder eine einzelne Datei reicht nicht. " +
+      "Mit Adresse ist es leichter: <b>cd quiz-room</b> &amp; <b>npm start</b> startet den kleinen " +
+      "Server, dann diese Seite über <b>http://&lt;deine-IP&gt;:3000/</b> öffnen.";
+    button.disabled = true;
+    button.textContent = "Keine Adresse";
+    return;
+  }
+
+  const url = location.href.split("?")[0].split("#")[0];
+  field.value = url;
+  hint.className = "hint";
+  hint.innerHTML =
+    "Diese Adresse öffnen alle im Browser – Name eintragen, Code eintippen, fertig. " +
+    "Im selben WLAN klappt das ohne Internet. Sind die Freunde woanders, nimm die Einzeldatei " +
+    "<b>quiz-einzeln.html</b> aus <b>npm run build</b>: Die bringt alles mit, wird einmal " +
+    "verschickt und läuft ohne Server und ohne Ordner daneben.";
+  button.addEventListener("click", () => {
+    copyText(url).then((ok) => {
+      button.textContent = ok ? "Kopiert ✓" : "Bitte selbst kopieren";
+      setTimeout(() => { button.textContent = "Adresse kopieren"; }, 1600);
+    });
+  });
+}
+
+/* =========================================================
+   Sound – komplett gerechnet, keine Audiodateien nötig
+   ========================================================= */
+const SND = (function () {
+  let ctx = null;
+  let on = localStorage.getItem("quiz.sound") !== "off";
+
+  /* Einen Ton-Kontext gibt es nur einmal – Effekte und Musik teilen ihn. */
+  function ac() {
+    try {
+      if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === "suspended") ctx.resume();
+      return ctx;
+    } catch (err) { return null; }
+  }
+
+  function ensure() {
+    return on ? ac() : null;
+  }
+
+  function tone(freq, start, dur, type, vol) {
+    const ac = ensure();
+    if (!ac) return;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    const t0 = ac.currentTime + start;
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(vol || 0.05, t0 + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(gain).connect(ac.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.03);
+  }
+
+  /* Rauschen für Whoosh und Applaus */
+  function noise(dur, vol, freq) {
+    const ac = ensure();
+    if (!ac) return;
+    const frames = Math.max(1, Math.floor(ac.sampleRate * dur));
+    const buffer = ac.createBuffer(1, frames, ac.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < frames; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / frames);
+    const src = ac.createBufferSource();
+    src.buffer = buffer;
+    const filter = ac.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = freq || 1600;
+    const gain = ac.createGain();
+    gain.gain.value = vol || 0.06;
+    src.connect(filter).connect(gain).connect(ac.destination);
+    src.start();
+  }
+
+  const fx = {
+    hover() { tone(900, 0, 0.045, "sine", 0.018); },
+    click() { tone(520, 0, 0.07, "triangle", 0.045); tone(790, 0.045, 0.09, "triangle", 0.032); },
+    pop() { tone(430, 0, 0.08, "sine", 0.04); tone(650, 0.06, 0.1, "sine", 0.03); },
+    whoosh() { noise(0.34, 0.07, 950); tone(200, 0, 0.3, "sawtooth", 0.02); },
+    tick() { tone(1250, 0, 0.03, "square", 0.018); },
+    /* Mit jeder Serie einen Halbton höher – das treibt nach oben. */
+    correct(streak) {
+      const base = 523 * Math.pow(1.06, Math.min(streak || 0, 9));
+      [0, 1, 2, 3].forEach((i) => tone(base * Math.pow(2, i / 4), i * 0.07, 0.22, "triangle", 0.055));
+      tone(base * 2, 0.3, 0.36, "sine", 0.03);
+    },
+    wrong() { tone(190, 0, 0.22, "sawtooth", 0.04); tone(140, 0.12, 0.3, "sawtooth", 0.034); },
+    giveUp() { tone(330, 0, 0.16, "triangle", 0.035); tone(247, 0.13, 0.24, "triangle", 0.03); },
+    win() {
+      [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, i * 0.1, 0.34, "triangle", 0.06));
+      noise(0.55, 0.05, 2800);
+      [1047, 1319, 1568].forEach((f, i) => tone(f, 0.58 + i * 0.09, 0.5, "sine", 0.045));
+    },
+    lose() { [392, 330, 262].forEach((f, i) => tone(f, i * 0.14, 0.4, "triangle", 0.045)); },
+    join() { [440, 660, 880].forEach((f, i) => tone(f, i * 0.08, 0.18, "sine", 0.045)); },
+
+    /* ---------- Die großen Show-Momente ---------- */
+    beep() { tone(680, 0, 0.15, "square", 0.05); tone(1020, 0.02, 0.11, "sine", 0.03); },
+    go() {
+      [392, 523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.06, 0.32, "triangle", 0.06));
+      noise(0.5, 0.06, 2600);
+      tone(1568, 0.42, 0.5, "sine", 0.04);
+    },
+    fever() { [880, 1175, 1568, 2093].forEach((f, i) => tone(f, i * 0.045, 0.28, "square", 0.028)); },
+    wipe() { noise(0.26, 0.05, 2400); },
+    /* Rakete zischt nach oben – Frequenz klettert mit. */
+    launch() {
+      const a = ensure();
+      if (!a) return;
+      const osc = a.createOscillator();
+      const gain = a.createGain();
+      const t0 = a.currentTime;
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(420, t0);
+      osc.frequency.exponentialRampToValueAtTime(1600, t0 + 0.55);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(0.03, t0 + 0.09);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.58);
+      osc.connect(gain).connect(a.destination);
+      osc.start(t0);
+      osc.stop(t0 + 0.62);
+    },
+    /* Und zerplatzt mit einem tiefen Knall. */
+    boom() {
+      const a = ensure();
+      if (!a) return;
+      const len = Math.max(1, Math.floor(a.sampleRate * 0.55));
+      const buf = a.createBuffer(1, len, a.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.4);
+      const src = a.createBufferSource();
+      src.buffer = buf;
+      const filter = a.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 820;
+      const gain = a.createGain();
+      gain.gain.value = 0.085;
+      src.connect(filter).connect(gain).connect(a.destination);
+      src.start();
+    }
+  };
+
+  return {
+    fx: fx,
+    ac: ac,
+    isOn() { return on; },
+    unlock() { ensure(); },
+    toggle() {
+      on = !on;
+      localStorage.setItem("quiz.sound", on ? "on" : "off");
+      if (on) fx.join();
+      return on;
+    }
+  };
+})();
+
+/* =========================================================
+   Musik – ebenfalls komplett gerechnet, kein Download
+   Vier Akkorde laufen im Kreis: Am – F – C – G
+   ========================================================= */
+const MUSIC = (function () {
+  const PROG = [
+    { bass: 110.00, notes: [220.00, 261.63, 329.63] },
+    { bass:  87.31, notes: [174.61, 220.00, 261.63] },
+    { bass: 130.81, notes: [261.63, 329.63, 392.00] },
+    { bass:  98.00, notes: [196.00, 246.94, 293.66] }
+  ];
+  const STEP_MS = 250;
+  let on = localStorage.getItem("quiz.music") === "on";
+  let timer = null;
+  let step = 0;
+  let master = null;
+
+  function bus() {
+    const a = SND.ac();
+    if (!a) return null;
+    if (!master) {
+      master = a.createGain();
+      master.gain.value = 0.0001;
+      master.connect(a.destination);
+    }
+    return master;
+  }
+
+  function note(freq, dur, vol, type, delay) {
+    const a = SND.ac();
+    const out = bus();
+    if (!a || !out) return;
+    const osc = a.createOscillator();
+    const gain = a.createGain();
+    const t0 = a.currentTime + (delay || 0);
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(gain).connect(out);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.06);
+  }
+
+  function bar() {
+    const chord = PROG[Math.floor(step / 8) % PROG.length];
+    const pos = step % 8;
+    if (pos === 0) {
+      note(chord.bass, 1.2, 0.42, "triangle");
+      note(chord.notes[0], 1.5, 0.15, "sine", 0.02);
+    }
+    if (pos === 2) note(chord.notes[1] * 2, 0.5, 0.1, "sine");
+    if (pos === 3) note(chord.notes[2] * 2, 0.36, 0.07, "triangle");
+    if (pos === 5) note(chord.notes[0] * 2, 0.46, 0.11, "sine");
+    if (pos === 6) note(chord.notes[2], 0.9, 0.09, "sine");
+    step++;
+  }
+
+  function start() {
+    if (!on || timer) return;
+    const a = SND.ac();
+    const out = bus();
+    if (!a || !out) return;
+    out.gain.cancelScheduledValues(a.currentTime);
+    out.gain.setValueAtTime(Math.max(out.gain.value, 0.0001), a.currentTime);
+    out.gain.exponentialRampToValueAtTime(0.16, a.currentTime + 1.2);
+    bar();
+    timer = setInterval(bar, STEP_MS);
+  }
+
+  function stop() {
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+    const a = SND.ac();
+    if (a && master) {
+      master.gain.cancelScheduledValues(a.currentTime);
+      master.gain.setValueAtTime(Math.max(master.gain.value, 0.0001), a.currentTime);
+      master.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + 0.6);
+    }
+  }
+
+  return {
+    isOn() { return on; },
+    start: start,
+    stop: stop,
+    toggle() {
+      on = !on;
+      localStorage.setItem("quiz.music", on ? "on" : "off");
+      if (on) start(); else stop();
+      return on;
+    }
+  };
+})();
+
+/* =========================================================
+   Show-Effekte: Konfetti, Blitz, Emojis, Wackeln
+   ========================================================= */
+const FIREWORK_COLORS = ["#a855f7", "#ec4899", "#22d3ee", "#fbbf24", "#34d399", "#f472b6"];
+
+function prefersReduced() {
+  return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+
+function confetti(count) {
+  const layer = el("confetti");
+  if (!layer) return;
+  if (prefersReduced()) return;
+  const total = Math.min(count || 90, 220);
+  for (let i = 0; i < total; i++) {
+    const bit = document.createElement("i");
+    bit.className = "confetti-bit";
+    bit.style.left = Math.random() * 100 + "%";
+    bit.style.background = FIREWORK_COLORS[i % FIREWORK_COLORS.length];
+    bit.style.animationDuration = (1.6 + Math.random() * 1.7) + "s";
+    bit.style.animationDelay = (Math.random() * 0.45) + "s";
+    bit.style.opacity = String(0.75 + Math.random() * 0.25);
+    layer.appendChild(bit);
+    setTimeout(() => bit.remove(), 4000);
+  }
+}
+
+function flash() {
+  const box = el("flash");
+  if (!box) return;
+  box.classList.remove("on");
+  void box.offsetWidth;
+  box.classList.add("on");
+}
+
+const EMOJI_BURST = ["🎉", "✨", "🔥", "💫", "🏆", "🎯", "⚡", "💥"];
+
+function emojiBurst(count) {
+  if (prefersReduced()) return;
+  const total = count || 7;
+  for (let i = 0; i < total; i++) {
+    const node = document.createElement("span");
+    node.className = "emoji-float";
+    node.textContent = EMOJI_BURST[Math.floor(Math.random() * EMOJI_BURST.length)];
+    node.style.left = (20 + Math.random() * 60) + "vw";
+    node.style.top = (30 + Math.random() * 30) + "vh";
+    node.style.animationDelay = (i * 60) + "ms";
+    document.body.appendChild(node);
+    setTimeout(() => node.remove(), 2200);
+  }
+}
+
+function shake(node) {
+  if (!node) return;
+  node.classList.remove("shake");
+  void node.offsetWidth;
+  node.classList.add("shake");
+  setTimeout(() => node.classList.remove("shake"), 500);
+}
+
+/* Konfetti aus beiden unteren Ecken nach oben geschossen */
+function cannons() {
+  const layer = el("confetti");
+  if (!layer || prefersReduced()) return;
+  [-1, 1].forEach((side) => {
+    for (let i = 0; i < 30; i++) {
+      const bit = document.createElement("i");
+      bit.className = "confetti-bit cannon";
+      bit.style.left = side < 0 ? "0" : "100%";
+      bit.style.bottom = "0";
+      bit.style.top = "auto";
+      bit.style.background = FIREWORK_COLORS[i % FIREWORK_COLORS.length];
+      bit.style.setProperty("--dx", side * Math.round(70 + Math.random() * 240) + "px");
+      bit.style.setProperty("--dy", -Math.round(38 + Math.random() * 58) + "vh");
+      bit.style.animationDuration = (1.5 + Math.random() * 1.1) + "s";
+      bit.style.animationDelay = (Math.random() * 0.24) + "s";
+      layer.appendChild(bit);
+      setTimeout(() => bit.remove(), 3200);
+    }
+  });
+}
+
+/* =========================================================
+   Feuerwerk auf eigenem Canvas – für die großen Momente
+   ========================================================= */
+const FW = (function () {
+  const canvas = el("fw");
+  if (!canvas || !canvas.getContext) return { play() {}, stop() {} };
+  const ctx = canvas.getContext("2d");
+  let width = 0;
+  let height = 0;
+  let ratio = 1;
+  let bits = [];
+  let rockets = [];
+  let raf = null;
+  let until = 0;
+
+  function resize() {
+    ratio = Math.min(window.devicePixelRatio || 1, 2);
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  function pick() { return FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)]; }
+
+  function explode(x, y) {
+    const main = pick();
+    const count = 46 + Math.floor(Math.random() * 26);
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.24;
+      const speed = 1.5 + Math.random() * 3.6;
+      bits.push({
+        x: x, y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        decay: 0.011 + Math.random() * 0.014,
+        size: 1.3 + Math.random() * 2,
+        color: Math.random() < 0.6 ? main : pick()
+      });
+    }
+  }
+
+  function launch() {
+    rockets.push({
+      x: width * (0.12 + Math.random() * 0.76),
+      y: height + 10,
+      vy: -(7 + Math.random() * 3.6),
+      target: height * (0.12 + Math.random() * 0.32)
+    });
+  }
+
+  function frame() {
+    ctx.clearRect(0, 0, width, height);
+    ctx.globalCompositeOperation = "lighter";
+
+    rockets = rockets.filter((r) => {
+      r.y += r.vy;
+      r.vy += 0.055;
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = "#fff3c4";
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      if (r.y <= r.target || r.vy >= -0.7) {
+        explode(r.x, r.y);
+        SND.fx.boom();
+        return false;
+      }
+      return true;
+    });
+
+    bits = bits.filter((b) => {
+      b.x += b.vx;
+      b.y += b.vy;
+      b.vy += 0.05;
+      b.vx *= 0.985;
+      b.vy *= 0.985;
+      b.life -= b.decay;
+      if (b.life <= 0) return false;
+      ctx.globalAlpha = Math.max(0, b.life);
+      ctx.fillStyle = b.color;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.size * b.life, 0, Math.PI * 2);
+      ctx.fill();
+      return true;
+    });
+
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
+
+    if (rockets.length || bits.length || performance.now() < until) {
+      if (performance.now() < until && rockets.length < 4 && Math.random() < 0.035) launch();
+      raf = requestAnimationFrame(frame);
+    } else {
+      raf = null;
+      ctx.clearRect(0, 0, width, height);
+    }
+  }
+
+  return {
+    play(seconds) {
+      if (prefersReduced()) return;
+      until = performance.now() + (seconds || 4) * 1000;
+      for (let i = 0; i < 3; i++) setTimeout(() => { SND.fx.launch(); launch(); }, i * 240);
+      if (!raf) raf = requestAnimationFrame(frame);
+    },
+    stop() {
+      until = 0;
+      rockets = [];
+      bits = [];
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
+      ctx.clearRect(0, 0, width, height);
+    }
+  };
+})();
+
+/* Kurzer Lichtwisch beim Wechsel der Ansicht */
+function wipe() {
+  const box = el("wipe");
+  if (!box || prefersReduced()) return;
+  box.classList.remove("on");
+  void box.offsetWidth;
+  box.classList.add("on");
+  SND.fx.wipe();
+}
+
+/* =========================================================
+   Show-Intro: 3 – 2 – 1 – LOS!
+   ========================================================= */
+let introTimer = null;
+
+function cancelIntro() {
+  if (!introTimer) return false;
+  clearInterval(introTimer);
+  introTimer = null;
+  const box = el("intro");
+  if (box) { box.classList.remove("on"); box.innerHTML = ""; }
+  return true;
+}
+
+function runIntro(done) {
+  const box = el("intro");
+  if (!box || prefersReduced() || introTimer) { done(); return; }
+
+  let n = 3;
+  box.classList.add("on");
+
+  const paint = () => {
+    const start = n <= 0;
+    box.innerHTML = '<span class="intro-ring"></span>' +
+      '<div class="intro-num">' + (start ? "LOS!" : n) + "</div>";
+    if (start) {
+      SND.fx.go();
+      flash();
+      cannons();
+    } else {
+      SND.fx.beep();
+    }
+  };
+
+  paint();
+  introTimer = setInterval(() => {
+    n--;
+    if (n < 0) {
+      clearInterval(introTimer);
+      introTimer = null;
+      box.classList.remove("on");
+      box.innerHTML = "";
+      done();
+      return;
+    }
+    paint();
+  }, 560);
+}
+
+/* ---------- Sound- und Musik-Knöpfe ---------- */
+function syncSoundButton() {
+  const on = SND.isOn();
+  el("soundBtn").classList.toggle("on", on);
+  el("soundIcon").textContent = on ? "🔊" : "🔇";
+  el("soundLabel").textContent = on ? "Sound an" : "Sound aus";
+}
+
+function syncMusicButton() {
+  const on = MUSIC.isOn();
+  el("musicBtn").classList.toggle("on", on);
+  el("musicLabel").textContent = on ? "Musik an" : "Musik aus";
+}
+
+function setSound(on) {
+  if (SND.isOn() !== on) SND.toggle();
+  syncSoundButton();
+}
+
+function setMusic(on) {
+  if (MUSIC.isOn() !== on) MUSIC.toggle();
+  syncMusicButton();
+}
+
+el("soundBtn").addEventListener("click", () => {
+  SND.toggle();
+  syncSoundButton();
+});
+
+el("musicBtn").addEventListener("click", () => {
+  MUSIC.toggle();
+  syncMusicButton();
+});
+
+/* Der Browser gibt Ton erst nach einer echten Berührung frei. */
+["pointerdown", "keydown"].forEach((type) => {
+  document.addEventListener(type, () => SND.unlock(), { once: true });
+});
+
+/* Ein Klick und ein leiser Tick beim Überfahren hören sich nach Show an. */
+let lastHover = 0;
+const HOVER_TARGETS = ".mode, .chip, .preset, .btn, .sound-btn";
+const CLICK_TARGETS = ".mode, .chip, .preset, .btn, .sound-btn";
+
+document.addEventListener("pointerover", (e) => {
+  if (!e.target || !e.target.closest || !e.target.closest(HOVER_TARGETS)) return;
+  const now = performance.now();
+  if (now - lastHover < 70) return;
+  lastHover = now;
+  SND.fx.hover();
+}, true);
+
+document.addEventListener("click", (e) => {
+  SND.unlock();
+  if (!e.target || !e.target.closest || !e.target.closest(CLICK_TARGETS)) return;
+  /* Richtig/Falsch und „Weiß ich nicht“ haben eigene Klänge. */
+  if (e.target.closest("#checkBtn, #dontKnowBtn")) return;
+  SND.fx.click();
+});
+
+/* Licht auf der Moduskarte folgt dem Zeiger – und eine Funken­spur läuft mit */
+let lastSpark = 0;
+
+document.addEventListener("pointermove", (e) => {
+  const card = e.target && e.target.closest ? e.target.closest(".mode") : null;
+  if (card) {
+    const box = card.getBoundingClientRect();
+    card.style.setProperty("--mx", Math.round(e.clientX - box.left) + "px");
+    card.style.setProperty("--my", Math.round(e.clientY - box.top) + "px");
+  }
+  if (prefersReduced() || e.pointerType === "touch") return;
+  const now = performance.now();
+  if (now - lastSpark < 90) return;
+  lastSpark = now;
+  const dot = document.createElement("span");
+  dot.className = "spark";
+  const size = 4 + Math.random() * 5;
+  const color = FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
+  dot.style.width = size + "px";
+  dot.style.height = size + "px";
+  dot.style.left = e.clientX + "px";
+  dot.style.top = e.clientY + "px";
+  dot.style.background = color;
+  dot.style.color = color;
+  dot.style.boxShadow = "0 0 12px currentColor";
+  document.body.appendChild(dot);
+  setTimeout(() => dot.remove(), 740);
+}, true);
+
+syncSoundButton();
+syncMusicButton();
+
+/* ---------- Schwebende Partikel hinter allem ---------- */
+(function particles() {
+  const canvas = el("fx");
+  if (!canvas || !canvas.getContext) return;
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const ctx = canvas.getContext("2d");
+  let dots = [];
+  let width = 0;
+  let height = 0;
+
+  function resize() {
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    const count = Math.round(Math.min(70, Math.max(26, (width * height) / 26000)));
+    dots = Array.from({ length: count }, () => ({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      r: 0.7 + Math.random() * 2.1,
+      vy: 0.12 + Math.random() * 0.45,
+      vx: (Math.random() - 0.5) * 0.25,
+      a: 0.18 + Math.random() * 0.45,
+      hue: Math.random() < 0.5 ? "168, 85, 247" : "34, 211, 238"
+    }));
+  }
+
+  function frame() {
+    ctx.clearRect(0, 0, width, height);
+    dots.forEach((d) => {
+      d.y -= d.vy;
+      d.x += d.vx;
+      if (d.y < -12) { d.y = height + 12; d.x = Math.random() * width; }
+      if (d.x < -12) d.x = width + 12;
+      if (d.x > width + 12) d.x = -12;
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(" + d.hue + ", " + d.a + ")";
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+  frame();
+})();
+
+/* ---------- Init ---------- */
+buildChips();
+buildPresets();
+updateStartHint();
+renderMultiModes();
+renderCodeTiles(el("joinPreview"), "");
+initShareLink();
+
+/* =========================================================
+   UI-FX
+   Spotlight folgt dem Zeiger, Kacheln kippen in den Raum,
+   Knöpfe schlagen Wellen, der Zähler poppt.
+   ========================================================= */
+(function uiFx() {
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const wantsPointer = !window.matchMedia ||
+    window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+  const SPOT = ".card, .chip, .preset, .mode, .stat, .step, .badge, .code-tile, .join-hero";
+  const TILT = ".stat, .mode, .code-tile, .preset";
+  let spotOn = null;
+
+  document.addEventListener("pointermove", (e) => {
+    const target = e.target && e.target.closest ? e.target.closest(SPOT) : null;
+    if (target !== spotOn) {
+      if (spotOn) spotOn.classList.remove("spot");
+      spotOn = target;
+      if (spotOn) spotOn.classList.add("spot");
+    }
+    if (!target) return;
+
+    const box = target.getBoundingClientRect();
+    target.style.setProperty("--mx", ((e.clientX - box.left) / box.width * 100).toFixed(1) + "%");
+    target.style.setProperty("--my", ((e.clientY - box.top) / box.height * 100).toFixed(1) + "%");
+
+    if (wantsPointer && target.matches(TILT)) {
+      const nx = (e.clientX - box.left) / box.width - 0.5;
+      const ny = (e.clientY - box.top) / box.height - 0.5;
+      target.style.setProperty("--ty", (nx * 7).toFixed(2) + "deg");
+      target.style.setProperty("--tx", (-ny * 6).toFixed(2) + "deg");
+      target.classList.add("tilted");
+    }
+  }, { passive: true });
+
+  document.addEventListener("pointerout", (e) => {
+    const target = e.target && e.target.closest ? e.target.closest(SPOT) : null;
+    if (!target || (e.relatedTarget && target.contains(e.relatedTarget))) return;
+    target.classList.remove("spot", "tilted");
+    target.style.removeProperty("--tx");
+    target.style.removeProperty("--ty");
+    if (spotOn === target) spotOn = null;
+  }, { passive: true });
+
+  /* ---------- Welle in jedem Knopf ---------- */
+  document.addEventListener("pointerdown", (e) => {
+    const target = e.target && e.target.closest ? e.target.closest(".btn") : null;
+    if (!target || target.disabled) return;
+    const box = target.getBoundingClientRect();
+    const size = Math.max(box.width, box.height) * 2;
+    const wave = document.createElement("span");
+    wave.className = "ui-ripple";
+    wave.style.width = size + "px";
+    wave.style.height = size + "px";
+    wave.style.left = (e.clientX - box.left) + "px";
+    wave.style.top = (e.clientY - box.top) + "px";
+    target.appendChild(wave);
+    setTimeout(() => wave.remove(), 720);
+  }, { passive: true });
+
+  /* ---------- Der Fragezähler poppt bei jeder neuen Frage ---------- */
+  const counter = el("counter");
+  if (counter && window.MutationObserver) {
+    let last = counter.textContent;
+    new MutationObserver(() => {
+      if (counter.textContent === last) return;
+      last = counter.textContent;
+      counter.classList.remove("bump");
+      void counter.offsetWidth;
+      counter.classList.add("bump");
+      setTimeout(() => counter.classList.remove("bump"), 700);
+    }).observe(counter, { childList: true, characterData: true, subtree: true });
+  }
+})();
+</script>
+</body>
+</html>
